@@ -3,27 +3,26 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Camera/CameraComponent.h"
+
 #include "GameFramework/Character.h"
+#include "GameFramework/SpringArmComponent.h"
+
 #include "TantrumCharacterBase.generated.h"
 
 UCLASS()
-class TANTRUM_API ATantrumCharacterBase : public ACharacter
-{
+class TANTRUM_API ATantrumCharacterBase : public ACharacter {
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
 	ATantrumCharacterBase();
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+	/** Camera boom positioning the camera behind the character */
+	UPROPERTY(VisibleAnywhere, Category = Camera)
+	TObjectPtr<USpringArmComponent> _cameraBoom;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
+	/** Follow camera */
+	UPROPERTY(VisibleAnywhere, Category = Camera)
+	TObjectPtr<UCameraComponent> _followCamera;
 };
