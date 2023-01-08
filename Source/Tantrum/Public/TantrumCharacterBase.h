@@ -3,7 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
 #include "GameFramework/Character.h"
+#include "InputMappingContext.h"
+
 #include "TantrumCharacterBase.generated.h"
 
 UCLASS()
@@ -12,18 +15,31 @@ class TANTRUM_API ATantrumCharacterBase : public ACharacter
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
 	ATantrumCharacterBase();
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+	void BeginPlay() override;
+	
+	void SetupPlayerInputComponent(class UInputComponent* playerInputComponent) override;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	/** MappingContext */
+	UPROPERTY(EditAnywhere, Category=Input)
+	TObjectPtr<UInputMappingContext> _defaultMappingContext;
 
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	/** Jump Input Action */
+	UPROPERTY(EditAnywhere, Category=Input)
+	TObjectPtr<UInputAction> _jumpAction;
 
+	/** Move Input Action */
+	UPROPERTY(EditAnywhere, Category=Input)
+	TObjectPtr<UInputAction> _moveAction;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	TObjectPtr<UInputAction> _lookAction;
+
+private:
+	void _move(const FInputActionValue& value);
+
+	void _look(const FInputActionValue& value);
 };

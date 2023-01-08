@@ -3,15 +3,23 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
 #include "GameFramework/PlayerController.h"
+
 #include "TantrumPlayerController.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class TANTRUM_API ATantrumPlayerController : public APlayerController
-{
+class TANTRUM_API ATantrumPlayerController : public APlayerController {
 	GENERATED_BODY()
+
+
+public:
+
+protected:
+	
+private:
 	
 };
