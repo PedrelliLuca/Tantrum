@@ -23,6 +23,7 @@ ATantrumCharacterBase::ATantrumCharacterBase() {
 	GetCharacterMovement()->MaxWalkSpeed = 500.f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
+	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;
 
 	// Camera boom creation (pulls in towards the player if there is a collision)
 	_cameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));

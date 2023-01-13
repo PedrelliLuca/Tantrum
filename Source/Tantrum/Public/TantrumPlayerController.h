@@ -37,6 +37,18 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
 	TObjectPtr<UInputAction> _lookAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	TObjectPtr<UInputAction> _sprintAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	TObjectPtr<UInputAction> _crouchAction;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	float _sprintSpeed = 1200.0f;
+
+	UPROPERTY(EditAnywhere, Category = Input)
+	float _walkSpeed = 600.0f;
+
 private:
 	void _jump();
 	void _stopJumping();
@@ -44,4 +56,10 @@ private:
 	void _move(const FInputActionValue& value);
 
 	void _look(const FInputActionValue& value);
+
+	void _sprintTriggered();
+	void _sprintCanceled();
+
+	void _crouchTriggered();
+	void _crouchCanceled();
 };
