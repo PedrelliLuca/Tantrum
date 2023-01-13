@@ -57,6 +57,8 @@ void ATantrumPlayerController::_jump() {
 }
 
 void ATantrumPlayerController::_stopJumping() {
+	// Needs to be combo-ed with "Jump Max Hold Time" to work, interrupts the jump, allowing shorter and higher jumps depending on how long the
+	// jump input was held.
 	if (const auto character = GetCharacter(); IsValid(character)) {
 		character->StopJumping();
 	}
@@ -104,14 +106,12 @@ void ATantrumPlayerController::_crouchTriggered() {
 		return;
 	}
 
-	character->GetCharacterMovement()->Crouch();
-	check(character->GetCharacterMovement()->IsCrouching());
+	character->Crouch();
 }
 
 void ATantrumPlayerController::_crouchCanceled() {
 	const auto character = GetCharacter();
 	check(IsValid(character));
 
-	character->GetCharacterMovement()->UnCrouch();
-	check(!character->GetCharacterMovement()->IsCrouching());
+	character->UnCrouch();
 }
