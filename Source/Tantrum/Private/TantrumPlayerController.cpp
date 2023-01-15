@@ -11,6 +11,23 @@
 ATantrumPlayerController::ATantrumPlayerController() {
 }
 
+void ATantrumPlayerController::Tick(float deltaSeconds) {
+	Super::Tick(deltaSeconds);
+
+	if (_stunTime < 0.f) {
+		return;
+	}
+
+	_stunTime += deltaSeconds;
+	if (_stunTime > _stunDuration) {
+		GetCharacter()->GetCharacterMovement()->MaxWalkSpeed = _walkSpeed;
+		_stunTime = -1.f;
+		return;
+	}
+
+	GetCharacter()->GetCharacterMovement()->MaxWalkSpeed = _walkSpeed * (_stunTime / _stunDuration);
+}
+
 void ATantrumPlayerController::BeginPlay() {
 	Super::BeginPlay();
 
@@ -20,7 +37,7 @@ void ATantrumPlayerController::BeginPlay() {
 		subsystem->AddMappingContext(_defaultMappingContext, 0);
 	}
 
-	_sprintCanceled();
+	GetCharacter()->LandedDelegate.AddDynamic(this, &ATantrumPlayerController::_onLanded);
 }
 
 void ATantrumPlayerController::SetupInputComponent() {
@@ -64,6 +81,23 @@ void ATantrumPlayerController::_stopJumping() {
 	}
 }
 
+void ATantrumPlayerController::_onLanded(const FHitResult& hit) {
+	const auto impactVelocity = FMath::Abs(GetCharacter()->GetVelocity().Z);
+	if (impactVelocity < _minStunVelocity) {
+		return;
+	}
+
+	const auto intensity = FMath::Clamp((impactVelocity - _minStunVelocity) / (_maxStunVelocity - _minStunVelocity), 0.0f, 1.0f);
+	const bool bAffectSmall = intensity < 0.5f;
+	const bool bAffectLarge = intensity >= 0.5f;
+
+	PlayDynamicForceFeedback(intensity, 0.5f, bAffectLarge, bAffectSmall, bAffectLarge, bAffectLarge);
+
+	_stunDuration = intensity * (_maxStunDuration - _minStunDuration);
+	_stunTime = 0.f;
+	GetCharacter()->GetCharacterMovement()->MaxWalkSpeed = 0.f;
+}
+
 void ATantrumPlayerController::_move(const FInputActionValue& value) {
 	const auto movementVector = value.Get<FVector2D>();
 
@@ -85,6 +119,11 @@ void ATantrumPlayerController::_look(const FInputActionValue& value) {
 }
 
 void ATantrumPlayerController::_sprintTriggered() {
+	// Can't sprint while stunned
+	if (_stunTime > 0.f) {
+		return;
+	}
+
 	const auto character = GetCharacter();
 	check(IsValid(character));
 
@@ -92,6 +131,11 @@ void ATantrumPlayerController::_sprintTriggered() {
 }
 
 void ATantrumPlayerController::_sprintCanceled() {
+	// Can't sprint while stunned
+	if (_stunTime > 0.f) {
+		return;
+	}
+
 	const auto character = GetCharacter();
 	check(IsValid(character));
 
