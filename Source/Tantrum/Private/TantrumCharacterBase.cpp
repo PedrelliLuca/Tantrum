@@ -35,4 +35,6 @@ ATantrumCharacterBase::ATantrumCharacterBase() {
 	_followCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	_followCamera->SetupAttachment(_cameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	_followCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+
+	_throwAbilityC = CreateDefaultSubobject<UThrowAbilityComponent>(TEXT("ThrowAbility"));
 }

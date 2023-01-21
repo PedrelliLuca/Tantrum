@@ -7,6 +7,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "ThrowAbilityComponent.h"
 
 ATantrumPlayerController::ATantrumPlayerController() {
 }
@@ -32,7 +33,7 @@ void ATantrumPlayerController::BeginPlay() {
 	Super::BeginPlay();
 
 	// Set up the mapping context
-	if (UEnhancedInputLocalPlayerSubsystem* subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer())) {
+	if (const auto subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer())) {
 		// The 0 priority will make the _defaultMappingContext easily overridable by other contexts
 		subsystem->AddMappingContext(_defaultMappingContext, 0);
 	}
@@ -65,6 +66,13 @@ void ATantrumPlayerController::SetupInputComponent() {
 	check(IsValid(_crouchAction));
 	enhancedInputComponent->BindAction(_crouchAction, ETriggerEvent::Triggered, this, &ATantrumPlayerController::_crouchTriggered);
 	enhancedInputComponent->BindAction(_crouchAction, ETriggerEvent::Completed, this, &ATantrumPlayerController::_crouchCanceled);
+
+	check(IsValid(_pullAction));
+	enhancedInputComponent->BindAction(_pullAction, ETriggerEvent::Triggered, this, &ATantrumPlayerController::_pullTriggered);
+	enhancedInputComponent->BindAction(_pullAction, ETriggerEvent::Completed, this, &ATantrumPlayerController::_pullCanceled);
+
+	check(IsValid(_throwAction));
+	enhancedInputComponent->BindAction(_throwAction, ETriggerEvent::Triggered, this, &ATantrumPlayerController::_throw);
 }
 
 void ATantrumPlayerController::_jump() {
@@ -158,4 +166,34 @@ void ATantrumPlayerController::_crouchCanceled() {
 	check(IsValid(character));
 
 	character->UnCrouch();
+}
+
+void ATantrumPlayerController::_pullTriggered() {
+	if (const auto throwAbilityC = GetCharacter()->FindComponentByClass<UThrowAbilityComponent>()) {
+		throwAbilityC->RequestPull();
+	}
+}
+
+void ATantrumPlayerController::_pullCanceled() {
+	if (const auto throwAbilityC = GetCharacter()->FindComponentByClass<UThrowAbilityComponent>()) {
+		throwAbilityC->RequestPullCancelation();
+	}
+}
+
+void ATantrumPlayerController::_throw(const FInputActionValue& value) {
+	const auto throwAxis = value.Get<float>();
+
+	if (const auto throwAbilityC = GetCharacter()->FindComponentByClass<UThrowAbilityComponent>()) {
+		if (!throwAbilityC->CanThrow()) {
+			_lastThrowAxis = 0.0f;
+			return;
+		}
+
+		const float delta = throwAxis - _lastThrowAxis;
+		_lastThrowAxis = throwAxis;
+
+		if (delta > _flickThreshold) {
+			throwAbilityC->RequestThrow();
+		}
+	}
 }

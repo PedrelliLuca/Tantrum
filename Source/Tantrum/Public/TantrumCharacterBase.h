@@ -7,6 +7,7 @@
 
 #include "GameFramework/Character.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "ThrowAbilityComponent.h"
 
 #include "TantrumCharacterBase.generated.h"
 
@@ -17,6 +18,9 @@ class TANTRUM_API ATantrumCharacterBase : public ACharacter {
 public:
 	ATantrumCharacterBase();
 
+	UFUNCTION(BlueprintPure)
+	bool IsPullingObject() const { return false; }
+
 protected:
 	/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, Category = Camera)
@@ -25,4 +29,6 @@ protected:
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, Category = Camera)
 	TObjectPtr<UCameraComponent> _followCamera;
+
+	TObjectPtr<UThrowAbilityComponent> _throwAbilityC;
 };

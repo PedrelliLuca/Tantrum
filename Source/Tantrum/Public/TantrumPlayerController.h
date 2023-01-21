@@ -26,29 +26,35 @@ protected:
 	
 	void SetupInputComponent() override;
 
-	UPROPERTY(EditAnywhere, Category=Input)
+	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputMappingContext> _defaultMappingContext;
 
-	UPROPERTY(EditAnywhere, Category=Input)
+	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputAction> _jumpAction;
 
-	UPROPERTY(EditAnywhere, Category=Input)
+	UPROPERTY(EditAnywhere, Category = "Input")
 	TObjectPtr<UInputAction> _moveAction;
 
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> _lookAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> _sprintAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> _crouchAction;
 
-	UPROPERTY(EditAnywhere, Category = Input)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> _pullAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> _throwAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
 	float _sprintSpeed = 1200.0f;
 
-	UPROPERTY(EditAnywhere, Category = Input)
+	UPROPERTY(EditAnywhere, Category = "Input")
 	float _walkSpeed = 600.0f;
 
 	// The final velocity for falling from 3m
@@ -63,6 +69,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Stun")
 	float _minStunDuration = 1.f;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	float _flickThreshold = 0.75f;
 
 private:
 	void _jump();
@@ -81,7 +90,14 @@ private:
 	void _crouchTriggered();
 	void _crouchCanceled();
 
+	void _pullTriggered();
+	void _pullCanceled();
+
+	void _throw(const FInputActionValue& value);
+
 	float _stunDuration = 0.f;
 
 	float _stunTime = -1.f;
+
+	float _lastThrowAxis = 0;
 };
