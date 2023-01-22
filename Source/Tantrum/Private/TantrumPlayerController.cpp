@@ -9,6 +9,13 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TantrumCharacterBase.h"
 
+static TAutoConsoleVariable<bool> CVarDisplayLaunchInputDelta(
+	TEXT("Tantrum.Character.Debug.DisplayLaunchInputDelta"),
+	false,
+	TEXT("Display Launch Input Delta"),
+	ECVF_Default,
+);
+
 ATantrumPlayerController::ATantrumPlayerController() {
 }
 
@@ -190,6 +197,13 @@ void ATantrumPlayerController::_throw(const FInputActionValue& value) {
 		}
 
 		const float delta = throwAxis - _lastThrowAxis;
+		//debug
+		if (CVarDisplayLaunchInputDelta->GetBool()) {
+			if (FMath::Abs(delta) > 0.0f) {
+				UE_LOG(LogTemp, Warning, TEXT("Axis: %f currentDelta %f"), throwAxis, _lastThrowAxis);
+			}
+		}
+
 		_lastThrowAxis = throwAxis;
 
 		if (delta > _flickThreshold) {
