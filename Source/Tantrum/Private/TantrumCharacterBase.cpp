@@ -38,3 +38,135 @@ ATantrumCharacterBase::ATantrumCharacterBase() {
 
 	_throwAbilityC = CreateDefaultSubobject<UThrowAbilityComponent>(TEXT("ThrowAbility"));
 }
+
+void ATantrumCharacterBase::RequestPull() {
+	/*if (!bIsStunned && _characterThrowState == ECharacterThrowState::None) {
+		_characterThrowState = ECharacterThrowState::RequestingPull;
+	}*/
+
+	// You can't pull while sprinting or while having a throwable ready to be thrown
+	/*if (GetOwner()->GetVelocity().SizeSquared() >= 100.0f) {
+		return;
+	}
+
+	if (_throwable.IsValid() && _throwable->Pull(this)) {
+		_characterThrowState = ECharacterThrowState::Pulling;
+		_throwable = nullptr;
+	}*/
+}
+
+void ATantrumCharacterBase::RequestPullCancelation() {
+}
+
+
+bool ATantrumCharacterBase::CanThrow() const {
+	return true;
+}
+
+void ATantrumCharacterBase::RequestThrow() {
+	if (!CanThrow()) {
+		return;
+	}
+
+	/*if (_playThrowMontage()) {
+		_characterThrowState = ECharacterThrowState::Throwing;
+	} else {
+		_resetThrowable();
+	}*/
+
+	const auto throwableRoot = Cast<UPrimitiveComponent>(_throwable->GetRootComponent());
+	check(IsValid(throwableRoot));
+	throwableRoot->IgnoreActorWhenMoving(GetOwner(), true);
+
+	const auto throwDirection = GetOwner()->GetActorForwardVector() * _throwSpeed;
+	_throwable->Throw(throwDirection);
+}
+
+void ATantrumCharacterBase::Tick(float deltaSeconds) {
+	Super::Tick(deltaSeconds);
+
+	// _updateStun();
+	/*if (_bIsStunned) {
+		return;
+	}
+
+	if (_characterThrowState == ECharacterThrowState::Throwing) {
+		if (const auto animInstance = GetMesh()->GetAnimInstance()) {
+			if (const auto animMontage = animInstance->GetCurrentActiveMontage()) {
+				const float playRate = animInstance->GetCurveValue(TEXT("ThrowCurve"));
+				animInstance->Montage_SetPlayRate(animMontage, playRate);
+			}
+		}
+	}*/
+}
+
+bool ATantrumCharacterBase::_playThrowMontage() {
+	const float playRate = 1.0f;
+	const bool bPlayedSuccessfully = PlayAnimMontage(_throwMontage, playRate) > 0.0f;
+	
+	if (bPlayedSuccessfully) {
+		const auto animInstance = GetMesh()->GetAnimInstance();
+
+		// Setting the blending out callback on the montage
+		if (!_blendingOutDelegate.IsBound()) {
+			_blendingOutDelegate.BindUObject(this, &ATantrumCharacterBase::_onMontageBlendingOut);
+		}
+		animInstance->Montage_SetBlendingOutDelegate(_blendingOutDelegate, _throwMontage);
+
+		// Setting the end delegate callback on the montage
+		if (!_montageEndedDelegate.IsBound()) {
+			_montageEndedDelegate.BindUObject(this, &ATantrumCharacterBase::_onMontageEnded);
+		}
+		animInstance->Montage_SetEndDelegate(_montageEndedDelegate, _throwMontage);
+
+		// Set the callbacks for when the montage begins and ends on the character
+		animInstance->OnPlayMontageNotifyBegin.AddDynamic(this, &ATantrumCharacterBase::_onNotifyBeginReceived);
+		animInstance->OnPlayMontageNotifyEnd.AddDynamic(this, &ATantrumCharacterBase::_onNotifyEndReceived);
+	}
+
+	return bPlayedSuccessfully;
+
+
+	//return true;
+}
+
+void ATantrumCharacterBase::_resetThrowable() {
+}
+
+void ATantrumCharacterBase::_onMontageBlendingOut(UAnimMontage* montage, bool bInterrupted) {
+}
+
+void ATantrumCharacterBase::_onMontageEnded(UAnimMontage* montage, bool bInterrupted) {
+	_unbindMontage();
+	// _characterThrowState = ECharacterThrowState::None;
+	MoveIgnoreActorRemove(_throwable.Get());
+
+	if (_throwable->GetRootComponent()) {
+		if (const auto throwableRoot = Cast<UPrimitiveComponent>(_throwable->GetRootComponent())) {
+			throwableRoot->IgnoreActorWhenMoving(this, false);
+		}
+	}
+
+	_throwable = nullptr;
+}
+
+void ATantrumCharacterBase::_unbindMontage() {
+}
+
+void ATantrumCharacterBase::_onNotifyBeginReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload) {
+	if (!(notifyName == "ThrowNotify")) {
+		return;
+	}
+
+	if (_throwable->GetRootComponent()) {
+		if (const auto throwableRoot = Cast<UPrimitiveComponent>(_throwable->GetRootComponent())) {
+			throwableRoot->IgnoreActorWhenMoving(this, true);
+		}
+
+		const auto throwDirection = GetActorForwardVector() * _throwSpeed;
+		_throwable->Throw(throwDirection);
+	}
+}
+
+void ATantrumCharacterBase::_onNotifyEndReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload) {
+}

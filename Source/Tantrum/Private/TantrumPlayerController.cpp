@@ -7,7 +7,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "ThrowAbilityComponent.h"
+#include "TantrumCharacterBase.h"
 
 ATantrumPlayerController::ATantrumPlayerController() {
 }
@@ -169,22 +169,22 @@ void ATantrumPlayerController::_crouchCanceled() {
 }
 
 void ATantrumPlayerController::_pullTriggered() {
-	if (const auto throwAbilityC = GetCharacter()->FindComponentByClass<UThrowAbilityComponent>()) {
-		throwAbilityC->RequestPull();
+	if (const auto tantrumChar = Cast<ATantrumCharacterBase>(GetCharacter())) {
+		tantrumChar->RequestPull();
 	}
 }
 
 void ATantrumPlayerController::_pullCanceled() {
-	if (const auto throwAbilityC = GetCharacter()->FindComponentByClass<UThrowAbilityComponent>()) {
-		throwAbilityC->RequestPullCancelation();
+	if (const auto tantrumChar = Cast<ATantrumCharacterBase>(GetCharacter())) {
+		tantrumChar->RequestPullCancelation();
 	}
 }
 
 void ATantrumPlayerController::_throw(const FInputActionValue& value) {
 	const auto throwAxis = value.Get<float>();
 
-	if (const auto throwAbilityC = GetCharacter()->FindComponentByClass<UThrowAbilityComponent>()) {
-		if (!throwAbilityC->CanThrow()) {
+	if (const auto tantrumChar = Cast<ATantrumCharacterBase>(GetCharacter())) {
+		if (!tantrumChar->CanThrow()) {
 			_lastThrowAxis = 0.0f;
 			return;
 		}
@@ -193,7 +193,7 @@ void ATantrumPlayerController::_throw(const FInputActionValue& value) {
 		_lastThrowAxis = throwAxis;
 
 		if (delta > _flickThreshold) {
-			throwAbilityC->RequestThrow();
+			tantrumChar->RequestThrow();
 		}
 	}
 }

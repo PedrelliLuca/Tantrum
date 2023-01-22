@@ -25,8 +25,13 @@ AThrowable::AThrowable() {
 bool AThrowable::Pull(TWeakObjectPtr<ACharacter> pullCharacter) {
 	check(pullCharacter.IsValid());
 
+	/*if (_state != EThrowState::Idle) {
+		return false;
+	}*/
+
 	if (_setHomingTarget(pullCharacter)) {
 		// ToggleHighlight(false);
+		// _state = EThrowState::Pull;
 		_pullCharacter = MoveTemp(pullCharacter);
 		return true;
 	}
@@ -35,10 +40,14 @@ bool AThrowable::Pull(TWeakObjectPtr<ACharacter> pullCharacter) {
 }
 
 void AThrowable::Throw(const FVector& throwDirection) {
+	// if (_state == EThrowState::Pull || _state == EThrowState::Attached) { ... all the code below }
+
 	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 
 	_projectileMovementC->Activate(true);
 	_projectileMovementC->HomingTargetComponent = nullptr;
+
+	// _state = EThrowState::Throw;
 
 	// TODO: add AActor* target input that can be optionally set. If set, its root component is chosen as new HomingTargetComponent
 
@@ -47,19 +56,26 @@ void AThrowable::Throw(const FVector& throwDirection) {
 
 void AThrowable::NotifyHit(UPrimitiveComponent* myComp, AActor* other, UPrimitiveComponent* otherComp, bool bSelfMoved, FVector hitLocation, FVector hitNormal, FVector normalImpulse, const FHitResult& hit) {
 	Super::NotifyHit(myComp, other, otherComp, bSelfMoved, hitLocation, hitNormal, normalImpulse, hit);
+	/*if (_state == EThrowState::Idle || _state == EThrowState::Attached || _state == EThrowState::Dropped) {
+		return;
+	}*/
 
 	if (!_pullCharacter.IsValid()) {
 		UE_LOG(LogTemp, Warning, TEXT("%s: Invalid _pullCharacter"), __FUNCTION__);
 		return;
 	}
 
+	// if (_state == EThrowState::Pull) { ... if-else below ... }
+
 	if (other == _pullCharacter) {
 		AttachToComponent(_pullCharacter->GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("Throwable Attach"));
 		SetOwner(_pullCharacter.Get());
 		_projectileMovementC->Deactivate();
+		// _state = EThrowState::Attached;
 		// character->OnThrowableAttached();
 	} else {
 		// character->ResetThrowableObject();
+		// _state = EThrowState::Dropped;
 	}
 	
 	_projectileMovementC->HomingTargetComponent = nullptr;

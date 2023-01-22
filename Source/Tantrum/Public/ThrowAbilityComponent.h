@@ -18,11 +18,6 @@ public:
 
 	bool CanThrow() const;
 
-	void RequestPull();
-	void RequestPullCancelation();
-
-	void RequestThrow();
-
 protected:
 	void BeginPlay() override;
 
