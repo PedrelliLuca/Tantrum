@@ -28,6 +28,11 @@ class TANTRUM_API ATantrumCharacterBase : public ACharacter {
 public:
 	ATantrumCharacterBase();
 
+	void Landed(const FHitResult& hit) override;
+
+	void RequestSprint();
+	void RequestSprintCancelation();
+
 	UFUNCTION(BlueprintPure)
 	bool IsPullingObject() const;
 
@@ -49,6 +54,9 @@ protected:
 	TObjectPtr<UCameraComponent> _followCamera;
 
 private:
+	void _updateStun(float deltaSeconds);
+	bool _isStunned() const { return _stunTime > 0.0f; }
+
 	bool _playThrowMontage();
 
 	void _sphereCastPlayerView();
@@ -70,6 +78,28 @@ private:
 	void _onNotifyBeginReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload);
 	UFUNCTION()
 	void _onNotifyEndReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload);
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	float _sprintSpeed = 1200.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	float _walkSpeed = 600.0f;
+
+	// The final velocity for falling from 3m
+	UPROPERTY(EditAnywhere, Category = "Stun")
+	float _minStunVelocity = 800.f;
+
+	UPROPERTY(EditAnywhere, Category = "Stun")
+	float _maxStunVelocity = 1600.f;
+
+	UPROPERTY(EditAnywhere, Category = "Stun")
+	float _maxStunDuration = 10.f;
+
+	UPROPERTY(EditAnywhere, Category = "Stun")
+	float _minStunDuration = 1.f;
+
+	float _stunDuration = 0.f;
+	float _stunTime = -1.f;
 
 	UPROPERTY(VisibleAnywhere, Category = "Throw")
 	ECharacterThrowState _characterThrowState = ECharacterThrowState::None;

@@ -18,8 +18,6 @@ class TANTRUM_API ATantrumPlayerController : public APlayerController {
 
 public:
 	ATantrumPlayerController();
-
-	void Tick(float deltaSeconds) override;
 	
 protected:
 	void BeginPlay() override;
@@ -52,34 +50,12 @@ protected:
 	TObjectPtr<UInputAction> _throwAction;
 
 	UPROPERTY(EditAnywhere, Category = "Input")
-	float _sprintSpeed = 1200.0f;
-
-	UPROPERTY(EditAnywhere, Category = "Input")
-	float _walkSpeed = 600.0f;
-
-	// The final velocity for falling from 3m
-	UPROPERTY(EditAnywhere, Category = "Stun")
-	float _minStunVelocity = 800.f;
-
-	UPROPERTY(EditAnywhere, Category = "Stun")
-	float _maxStunVelocity = 1600.f;
-
-	UPROPERTY(EditAnywhere, Category = "Stun")
-	float _maxStunDuration = 10.f;
-
-	UPROPERTY(EditAnywhere, Category = "Stun")
-	float _minStunDuration = 1.f;
-
-	UPROPERTY(EditAnywhere, Category = "Input")
 	float _flickThreshold = 0.75f;
 
 private:
 	void _jump();
 	void _stopJumping();
 
-	UFUNCTION()
-	void _onLanded(const FHitResult& hit);
-	
 	void _move(const FInputActionValue& value);
 
 	void _look(const FInputActionValue& value);
@@ -94,10 +70,6 @@ private:
 	void _pullCanceled();
 
 	void _throw(const FInputActionValue& value);
-
-	float _stunDuration = 0.f;
-
-	float _stunTime = -1.f;
 
 	float _lastThrowAxis = 0;
 };

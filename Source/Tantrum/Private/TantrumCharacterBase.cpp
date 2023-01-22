@@ -68,12 +68,49 @@ ATantrumCharacterBase::ATantrumCharacterBase() {
 	_followCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 }
 
+void ATantrumCharacterBase::Landed(const FHitResult& hit) {
+	const auto impactVelocity = FMath::Abs(GetVelocity().Z);
+	if (impactVelocity < _minStunVelocity) {
+		return;
+	}
+
+	const auto intensity = FMath::Clamp((impactVelocity - _minStunVelocity) / (_maxStunVelocity - _minStunVelocity), 0.0f, 1.0f);
+	const bool bAffectSmall = intensity < 0.5f;
+	const bool bAffectLarge = intensity >= 0.5f;
+
+	if (const auto playerController = Cast<APlayerController>(GetController())) {
+		playerController->PlayDynamicForceFeedback(intensity, 0.5f, bAffectLarge, bAffectSmall, bAffectLarge, bAffectLarge);
+	}
+
+	_stunDuration = intensity * (_maxStunDuration - _minStunDuration);
+	_stunTime = 0.f;
+	GetCharacterMovement()->MaxWalkSpeed = 0.f;
+}
+
+void ATantrumCharacterBase::RequestSprint() {
+	// Can't sprint while stunned
+	if (_isStunned()) {
+		return;
+	}
+
+	GetCharacterMovement()->MaxWalkSpeed = _sprintSpeed;
+}
+
+void ATantrumCharacterBase::RequestSprintCancelation() {
+	// Can't sprint while stunned
+	if (_isStunned()) {
+		return;
+	}
+
+	GetCharacterMovement()->MaxWalkSpeed = _walkSpeed;
+}
+
 bool ATantrumCharacterBase::IsPullingObject() const {
 	return _characterThrowState == ECharacterThrowState::RequestingPull || _characterThrowState == ECharacterThrowState::Pulling;
 }
 
 void ATantrumCharacterBase::RequestPull() {
-	if (/*!bIsStunned &&*/ _characterThrowState == ECharacterThrowState::None) {
+	if (!_isStunned() && _characterThrowState == ECharacterThrowState::None) {
 		_characterThrowState = ECharacterThrowState::RequestingPull;
 	}
 }
@@ -105,10 +142,10 @@ void ATantrumCharacterBase::RequestThrow() {
 void ATantrumCharacterBase::Tick(float deltaSeconds) {
 	Super::Tick(deltaSeconds);
 
-	// _updateStun();
-	/*if (_bIsStunned) {
+	_updateStun(deltaSeconds);
+	if (_isStunned()) {
 		return;
-	}*/
+	}
 
 	if (_characterThrowState == ECharacterThrowState::Throwing) {
 		if (const auto animInstance = GetMesh()->GetAnimInstance()) {
@@ -139,6 +176,21 @@ void ATantrumCharacterBase::Tick(float deltaSeconds) {
 			_sphereCastPlayerView();
 		}
 	}
+}
+
+void ATantrumCharacterBase::_updateStun(const float deltaSeconds) {
+	if (_stunTime < 0.f) {
+		return;
+	}
+
+	_stunTime += deltaSeconds;
+	if (_stunTime > _stunDuration) {
+		GetCharacterMovement()->MaxWalkSpeed = _walkSpeed;
+		_stunTime = -1.f;
+		return;
+	}
+
+	GetCharacterMovement()->MaxWalkSpeed = _walkSpeed * (_stunTime / _stunDuration);
 }
 
 bool ATantrumCharacterBase::_playThrowMontage() {
@@ -260,8 +312,8 @@ void ATantrumCharacterBase::_processTraceResult(const FHitResult& hitResult) {
 	}
 
 	if (_characterThrowState == ECharacterThrowState::RequestingPull) {
-		// You can't pull while sprinting or while having a throwable ready to be thrown
-		if (GetVelocity().SizeSquared() >= 100.0f) {
+		// You can't pull while sprinting
+		if (FMath::IsNearlyEqual(GetCharacterMovement()->MaxWalkSpeed, _sprintSpeed) || GetCharacterMovement()->MaxWalkSpeed > _sprintSpeed) {
 			return;
 		}
 

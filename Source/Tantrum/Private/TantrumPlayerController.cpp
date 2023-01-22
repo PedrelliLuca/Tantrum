@@ -19,22 +19,6 @@ static TAutoConsoleVariable<bool> CVarDisplayLaunchInputDelta(
 ATantrumPlayerController::ATantrumPlayerController() {
 }
 
-void ATantrumPlayerController::Tick(float deltaSeconds) {
-	Super::Tick(deltaSeconds);
-
-	if (_stunTime < 0.f) {
-		return;
-	}
-
-	_stunTime += deltaSeconds;
-	if (_stunTime > _stunDuration) {
-		GetCharacter()->GetCharacterMovement()->MaxWalkSpeed = _walkSpeed;
-		_stunTime = -1.f;
-		return;
-	}
-
-	GetCharacter()->GetCharacterMovement()->MaxWalkSpeed = _walkSpeed * (_stunTime / _stunDuration);
-}
 
 void ATantrumPlayerController::BeginPlay() {
 	Super::BeginPlay();
@@ -44,8 +28,6 @@ void ATantrumPlayerController::BeginPlay() {
 		// The 0 priority will make the _defaultMappingContext easily overridable by other contexts
 		subsystem->AddMappingContext(_defaultMappingContext, 0);
 	}
-
-	GetCharacter()->LandedDelegate.AddDynamic(this, &ATantrumPlayerController::_onLanded);
 }
 
 void ATantrumPlayerController::SetupInputComponent() {
@@ -96,23 +78,6 @@ void ATantrumPlayerController::_stopJumping() {
 	}
 }
 
-void ATantrumPlayerController::_onLanded(const FHitResult& hit) {
-	const auto impactVelocity = FMath::Abs(GetCharacter()->GetVelocity().Z);
-	if (impactVelocity < _minStunVelocity) {
-		return;
-	}
-
-	const auto intensity = FMath::Clamp((impactVelocity - _minStunVelocity) / (_maxStunVelocity - _minStunVelocity), 0.0f, 1.0f);
-	const bool bAffectSmall = intensity < 0.5f;
-	const bool bAffectLarge = intensity >= 0.5f;
-
-	PlayDynamicForceFeedback(intensity, 0.5f, bAffectLarge, bAffectSmall, bAffectLarge, bAffectLarge);
-
-	_stunDuration = intensity * (_maxStunDuration - _minStunDuration);
-	_stunTime = 0.f;
-	GetCharacter()->GetCharacterMovement()->MaxWalkSpeed = 0.f;
-}
-
 void ATantrumPlayerController::_move(const FInputActionValue& value) {
 	const auto movementVector = value.Get<FVector2D>();
 
@@ -134,27 +99,15 @@ void ATantrumPlayerController::_look(const FInputActionValue& value) {
 }
 
 void ATantrumPlayerController::_sprintTriggered() {
-	// Can't sprint while stunned
-	if (_stunTime > 0.f) {
-		return;
+	if (const auto tantrumChar = Cast<ATantrumCharacterBase>(GetCharacter())) {
+		tantrumChar->RequestSprint();
 	}
-
-	const auto character = GetCharacter();
-	check(IsValid(character));
-
-	character->GetCharacterMovement()->MaxWalkSpeed = _sprintSpeed;
 }
 
 void ATantrumPlayerController::_sprintCanceled() {
-	// Can't sprint while stunned
-	if (_stunTime > 0.f) {
-		return;
+	if (const auto tantrumChar = Cast<ATantrumCharacterBase>(GetCharacter())) {
+		tantrumChar->RequestSprintCancelation();
 	}
-
-	const auto character = GetCharacter();
-	check(IsValid(character));
-
-	character->GetCharacterMovement()->MaxWalkSpeed = _walkSpeed;
 }
 
 void ATantrumPlayerController::_crouchTriggered() {
