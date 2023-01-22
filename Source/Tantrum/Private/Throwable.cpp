@@ -5,7 +5,6 @@
 
 #include "Components/CapsuleComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "TantrumCharacterBase.h"
 
 AThrowable::AThrowable() {
 	PrimaryActorTick.bCanEverTick = false;
@@ -84,22 +83,13 @@ void AThrowable::NotifyHit(UPrimitiveComponent* myComp, AActor* other, UPrimitiv
 			SetOwner(_pullCharacter.Get());
 			_projectileMovementC->Deactivate();
 			_state = EThrowState::Attached;
-			// TODO: replace this with a delegate broadcast
-			if (const auto tantrumChar = Cast<ATantrumCharacterBase>(_pullCharacter)) {
-				tantrumChar->OnThrowableAttached(this);
-			}
+			_onThrowableCatched.Broadcast();
 		} else {
-			// TODO: replace this with a delegate broadcast
-			if (const auto tantrumChar = Cast<ATantrumCharacterBase>(_pullCharacter)) {
-				tantrumChar->ResetThrowableObject();
-			}
+			_onThrowableMissed.Broadcast();
 			_state = EThrowState::Dropped;
 		}
 	}
 
-	// To avoid calling tantrum character's OnThowableAttached() and ResetThrowableObject()
-	_onThrowableAttached.Broadcast(_pullCharacter.Get());
-	
 	_projectileMovementC->HomingTargetComponent = nullptr;
 	_pullCharacter = nullptr;
 }

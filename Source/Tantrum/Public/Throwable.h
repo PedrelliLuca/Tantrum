@@ -10,8 +10,9 @@
 
 #include "Throwable.generated.h"
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnThrowableAttached, ACharacter*);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnThrowableAttached, ACharacter*);
+DECLARE_MULTICAST_DELEGATE(FOnThrowableCatched);
+DECLARE_MULTICAST_DELEGATE(FOnThrowableMissed);
+
 
 UCLASS()
 class TANTRUM_API AThrowable : public AActor {
@@ -36,7 +37,8 @@ public:
 
 	void ToggleHighlight(bool bIsOn);
 
-	FOnThrowableAttached& OnThrowableAttached() { return _onThrowableAttached; }
+	FOnThrowableCatched& OnThrowableAttached() { return _onThrowableCatched; }
+	FOnThrowableMissed& OnThrowableMissed() { return _onThrowableMissed; }
 
 protected:
 	void BeginPlay() override;
@@ -71,5 +73,6 @@ private:
 
 	EThrowState _state = EThrowState::Idle;
 
-	FOnThrowableAttached _onThrowableAttached;
+	FOnThrowableCatched _onThrowableCatched;
+	FOnThrowableMissed _onThrowableMissed;
 };

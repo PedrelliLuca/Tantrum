@@ -98,26 +98,8 @@ void ATantrumCharacterBase::RequestThrow() {
 	if (_playThrowMontage()) {
 		_characterThrowState = ECharacterThrowState::Throwing;
 	} else {
-		_resetThrowable();
+		_resetThrowableObject();
 	}
-}
-
-// TODO: I don't like this because it needs to be called from AThrowable, and I don't want that class to know about this one.
-void ATantrumCharacterBase::ResetThrowableObject() {
-	if (_throwable.IsValid()) {
-		_throwable->Drop();
-	}
-	_characterThrowState = ECharacterThrowState::None;
-	_throwable = nullptr;
-}
-
-// TODO: I don't like this because it needs to be called from AThrowable, and I don't want that class to know about this one.
-// Change things to use a delegate (the throwable can be set when the pull starts, not necessarily when the attachment occurs. Meaning that we can bind to some 
-// AThrowable delegate when the pulling start). This function shoud also dispatch to _resetThrowableObject() if needed, see commented logic in AThrowable::NotifyHit()
-void ATantrumCharacterBase::OnThrowableAttached(TWeakObjectPtr<AThrowable> throwable) {
-	_characterThrowState = ECharacterThrowState::Attached;
-	_throwable = MoveTemp(throwable);
-	MoveIgnoreActorAdd(_throwable.Get());
 }
 
 void ATantrumCharacterBase::Tick(float deltaSeconds) {
@@ -184,15 +166,6 @@ bool ATantrumCharacterBase::_playThrowMontage() {
 	}
 
 	return bPlayedSuccessfully;
-}
-
-void ATantrumCharacterBase::_resetThrowable() {
-	if (_throwable.IsValid()) {
-		_throwable->Drop();
-	}
-
-	_characterThrowState = ECharacterThrowState::None;
-	_throwable = nullptr;
 }
 
 void ATantrumCharacterBase::_sphereCastPlayerView() {
@@ -280,7 +253,8 @@ void ATantrumCharacterBase::_processTraceResult(const FHitResult& hitResult) {
 
 	if (isValidTarget) {
 		if (!_throwable.IsValid()) {
-			_throwable = hitThrowable;
+			_setThrowable(hitThrowable);
+
 			_throwable->ToggleHighlight(true);
 		}
 	}
@@ -293,7 +267,6 @@ void ATantrumCharacterBase::_processTraceResult(const FHitResult& hitResult) {
 
 		if (_throwable.IsValid() && _throwable->Pull(this)) {
 			_characterThrowState = ECharacterThrowState::Pulling;
-			_throwable = nullptr;
 		}
 	}
 }
@@ -312,7 +285,7 @@ void ATantrumCharacterBase::_onMontageEnded(UAnimMontage* montage, bool bInterru
 		}
 	}
 
-	_throwable = nullptr;
+	_resetThrowableObject();
 }
 
 void ATantrumCharacterBase::_unbindMontage() {
@@ -320,6 +293,31 @@ void ATantrumCharacterBase::_unbindMontage() {
 		animInstance->OnPlayMontageNotifyBegin.RemoveDynamic(this, &ATantrumCharacterBase::_onNotifyBeginReceived);
 		animInstance->OnPlayMontageNotifyEnd.RemoveDynamic(this, &ATantrumCharacterBase::_onNotifyEndReceived);
 	}
+}
+
+void ATantrumCharacterBase::_setThrowable(TWeakObjectPtr<AThrowable> newThrowable) {
+	check(newThrowable.IsValid());
+
+	_throwable = MoveTemp(newThrowable);
+	_throwable->OnThrowableAttached().AddUObject(this, &ATantrumCharacterBase::_onThrowableAttached);
+	_throwable->OnThrowableMissed().AddUObject(this, &ATantrumCharacterBase::_resetThrowableObject);
+}
+
+void ATantrumCharacterBase::_resetThrowableObject() {
+	_characterThrowState = ECharacterThrowState::None;
+
+	if (_throwable.IsValid()) {
+		_throwable->Drop();
+		_throwable->OnThrowableAttached().RemoveAll(this);
+		_throwable->OnThrowableMissed().RemoveAll(this);
+	}
+	_throwable = nullptr;
+}
+
+void ATantrumCharacterBase::_onThrowableAttached() {
+	check(_throwable.IsValid());
+	_characterThrowState = ECharacterThrowState::Attached;
+	MoveIgnoreActorAdd(_throwable.Get());
 }
 
 void ATantrumCharacterBase::_onNotifyBeginReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload) {

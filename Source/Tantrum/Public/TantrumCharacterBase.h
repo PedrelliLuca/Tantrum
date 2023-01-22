@@ -36,14 +36,6 @@ public:
 
 	bool CanThrow() const;
 	void RequestThrow();
-	
-	// TODO: I don't like this because it needs to be called from AThrowable, and I don't want that class to know about this one.
-	void ResetThrowableObject();
-
-	// TODO: I don't like this because it needs to be called from AThrowable, and I don't want that class to know about this one.
-	// Change things to use a delegate (the throwable can be set when the pull starts, not necessarily when the attachment occurs. Meaning that we can bind to some 
-	// AThrowable delegate when the pulling start). This function shoud also dispatch to _resetThrowableObject() if needed, see commented logic in AThrowable::NotifyHit()
-	void OnThrowableAttached(TWeakObjectPtr<AThrowable> throwable);
 
 	void Tick(float deltaSeconds) override;
 
@@ -58,7 +50,6 @@ protected:
 
 private:
 	bool _playThrowMontage();
-	void _resetThrowable();
 
 	void _sphereCastPlayerView();
 	void _sphereCastActorTransform();
@@ -69,6 +60,11 @@ private:
 	void _onMontageBlendingOut(UAnimMontage* montage, bool bInterrupted);
 	void _onMontageEnded(UAnimMontage* montage, bool bInterrupted);
 	void _unbindMontage();
+
+	void _setThrowable(TWeakObjectPtr<AThrowable> newThrowable);
+
+	void _resetThrowableObject();
+	void _onThrowableAttached();
 
 	UFUNCTION()
 	void _onNotifyBeginReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload);
