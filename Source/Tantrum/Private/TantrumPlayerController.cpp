@@ -200,7 +200,7 @@ void ATantrumPlayerController::_throw(const FInputActionValue& value) {
 		//debug
 		if (CVarDisplayLaunchInputDelta->GetBool()) {
 			if (FMath::Abs(delta) > 0.0f) {
-				UE_LOG(LogTemp, Warning, TEXT("Axis: %f currentDelta %f"), throwAxis, _lastThrowAxis);
+				UE_LOG(LogTemp, Warning, TEXT("Axis: %f currentDelta %f"), throwAxis, delta);
 			}
 		}
 

@@ -30,7 +30,7 @@ bool AThrowable::Pull(TWeakObjectPtr<ACharacter> pullCharacter) {
 	}
 
 	if (_setHomingTarget(pullCharacter)) {
-		// ToggleHighlight(false);
+		ToggleHighlight(false);
 		_state = EThrowState::Pull;
 		_pullCharacter = MoveTemp(pullCharacter);
 		return true;
@@ -80,7 +80,7 @@ void AThrowable::NotifyHit(UPrimitiveComponent* myComp, AActor* other, UPrimitiv
 	if (_state == EThrowState::Pull) {
 
 		if (other == _pullCharacter) {
-			AttachToComponent(_pullCharacter->GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("Throwable Attach"));
+			AttachToComponent(_pullCharacter->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("ObjectAttach"));
 			SetOwner(_pullCharacter.Get());
 			_projectileMovementC->Deactivate();
 			_state = EThrowState::Attached;
@@ -128,6 +128,7 @@ bool AThrowable::_setHomingTarget(TWeakObjectPtr<AActor> target) {
 		_projectileMovementC->Activate(true);
 		_projectileMovementC->HomingTargetComponent = sceneC;
 		_projectileMovementC->Velocity = FVector::UpVector * _initialZVelocity;
+		_projectileMovementC->bIsHomingProjectile = true;
 		return true;
 	}
 

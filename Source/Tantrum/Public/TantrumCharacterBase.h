@@ -70,7 +70,9 @@ private:
 	void _onMontageEnded(UAnimMontage* montage, bool bInterrupted);
 	void _unbindMontage();
 
+	UFUNCTION()
 	void _onNotifyBeginReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload);
+	UFUNCTION()
 	void _onNotifyEndReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload);
 
 	UPROPERTY(VisibleAnywhere, Category = "Throw")
