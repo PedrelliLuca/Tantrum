@@ -4,7 +4,36 @@
 #include "TantrumCharacterBase.h"
 
 #include "Components/CapsuleComponent.h"
+#include "DrawDebugHelpers.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/KismetSystemLibrary.h"
+
+constexpr int CVSphereCastPlayerView = 0;
+constexpr int CVSphereCastActorTransform = 1;
+constexpr int CVLineCastActorTransform = 2;
+
+static TAutoConsoleVariable<int> CVarTraceMode(
+	TEXT("Tantrum.Character.Debug.TraceMode"),
+	0,
+	TEXT("    0: Sphere cast PlayerView is used for direction/rotation (default).\n")
+	TEXT("    1: Sphere cast using ActorTransform \n")
+	TEXT("    2: Line cast using ActorTransform \n"),
+	ECVF_Default
+);
+
+static TAutoConsoleVariable<bool> CVarDisplayTrace(
+	TEXT("Tantrum.Character.Debug.DisplayTrace"),
+	false,
+	TEXT("Display Trace\n"),
+	ECVF_Default
+);
+
+static TAutoConsoleVariable<bool> CVarDisplayThrowVelocity(
+	TEXT("Tantrum.Character.Debug.DisplayThrowVelocity"),
+	false,
+	TEXT("Display Throw Velocity\n"),
+	ECVF_Default
+);
 
 ATantrumCharacterBase::ATantrumCharacterBase() {
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -45,16 +74,6 @@ void ATantrumCharacterBase::RequestPull() {
 	if (/*!bIsStunned &&*/ _characterThrowState == ECharacterThrowState::None) {
 		_characterThrowState = ECharacterThrowState::RequestingPull;
 	}
-
-	// You can't pull while sprinting or while having a throwable ready to be thrown
-	/*if (GetOwner()->GetVelocity().SizeSquared() >= 100.0f) {
-		return;
-	}
-
-	if (_throwable.IsValid() && _throwable->Pull(this)) {
-		_characterThrowState = ECharacterThrowState::Pulling;
-		_throwable = nullptr;
-	}*/
 }
 
 void ATantrumCharacterBase::RequestPullCancelation() {
@@ -96,7 +115,7 @@ void ATantrumCharacterBase::Tick(float deltaSeconds) {
 	// _updateStun();
 	/*if (_bIsStunned) {
 		return;
-	}
+	}*/
 
 	if (_characterThrowState == ECharacterThrowState::Throwing) {
 		if (const auto animInstance = GetMesh()->GetAnimInstance()) {
@@ -105,7 +124,26 @@ void ATantrumCharacterBase::Tick(float deltaSeconds) {
 				animInstance->Montage_SetPlayRate(animMontage, playRate);
 			}
 		}
-	}*/
+	} else if (_characterThrowState == ECharacterThrowState::None || _characterThrowState == ECharacterThrowState::RequestingPull) {
+		// We're in a state that allows to pick up objects.
+		// How are we tracing for _throwables?
+		switch (CVarTraceMode->GetInt()) {
+		case CVSphereCastPlayerView:
+			// Sphere trace from the camera (best option by far)
+			_sphereCastPlayerView();
+			break;
+		case CVSphereCastActorTransform:
+			// Sphere trace from the character
+			_sphereCastActorTransform();
+			break;
+		case CVLineCastActorTransform:
+			// Line trace from the character
+			_lineCastActorTransform();
+			break;
+		default:
+			_sphereCastPlayerView();
+		}
+	}
 }
 
 bool ATantrumCharacterBase::_playThrowMontage() {
@@ -142,6 +180,110 @@ void ATantrumCharacterBase::_resetThrowable() {
 
 	_characterThrowState = ECharacterThrowState::None;
 	_throwable = nullptr;
+}
+
+void ATantrumCharacterBase::_sphereCastPlayerView() {
+	FVector location;
+	FRotator rotation;
+	GetController()->GetPlayerViewPoint(location, rotation);
+
+	const auto playerViewForward = rotation.Vector();
+	const auto additionalDistance = (location - GetActorLocation()).Size(); // player to camera distance
+	const auto endLocation = location + (playerViewForward * _pullRange + additionalDistance);
+
+	const auto forwardVector = GetActorForwardVector();
+	const auto dotProduct = FVector::DotProduct(playerViewForward, forwardVector);
+
+	// Prevent picking up objects behind the character. This happens when the pull input is given with the camera looking
+	// at the character's front side.
+	if (dotProduct < -0.23f) {
+		if (_throwable.IsValid()) {
+			_throwable->ToggleHighlight(false);
+			_throwable = nullptr;
+		}
+
+		return;
+	}
+
+	FHitResult hitResult;
+	const auto debugTrace = CVarDisplayTrace->GetBool() ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None;
+
+	TArray<AActor*> actorsToIgnore;
+	actorsToIgnore.Add(this);
+
+	// Same function as the BP node
+	UKismetSystemLibrary::SphereTraceSingle(GetWorld(), location, endLocation, _pullSphereTraceRadius, UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_Visibility), false, actorsToIgnore, debugTrace, hitResult, true);
+	_processTraceResult(hitResult);
+
+#if ENABLE_DRAW_DEBUG
+	if (CVarDisplayTrace->GetBool()) {
+		static float fovDeg = 90.0f;
+		DrawDebugCamera(GetWorld(), location, rotation, fovDeg);
+		DrawDebugLine(GetWorld(), location, endLocation, hitResult.bBlockingHit ? FColor::Red : FColor::White);
+		DrawDebugPoint(GetWorld(), endLocation, _debugPointRadius, hitResult.bBlockingHit ? FColor::Red : FColor::White);
+
+	}
+#endif
+}
+
+void ATantrumCharacterBase::_sphereCastActorTransform() {
+	const auto startLoc = GetActorLocation();
+	const auto endLoc = startLoc + (GetActorForwardVector() * _pullRange);
+
+	const auto debugTrace = CVarDisplayTrace->GetBool() ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None;
+	FHitResult hitResult;
+
+	UKismetSystemLibrary::SphereTraceSingle(GetWorld(), startLoc, endLoc, _debugPointRadius, UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_Visibility), false, {}, debugTrace, hitResult, true);
+	_processTraceResult(hitResult);
+}
+
+void ATantrumCharacterBase::_lineCastActorTransform() {
+	const auto startLoc = GetActorLocation();
+	const auto endLoc = startLoc + (GetActorForwardVector() * _pullRange);
+	
+	FHitResult hitResult;
+	GetWorld()->LineTraceSingleByChannel(hitResult, startLoc, endLoc, ECollisionChannel::ECC_Visibility);
+	_processTraceResult(hitResult);
+
+#if ENABLE_DRAW_DEBUG
+	if (CVarDisplayTrace->GetBool()) {
+		DrawDebugLine(GetWorld(), startLoc, endLoc, hitResult.bBlockingHit ? FColor::Red : FColor::White);
+	}
+#endif
+}
+
+void ATantrumCharacterBase::_processTraceResult(const FHitResult& hitResult) {
+	const auto hitThrowable = Cast<AThrowable>(hitResult.GetActor());
+
+	const bool isSameActor = _throwable == hitThrowable;
+	const bool isValidTarget = IsValid(hitThrowable) && hitThrowable->IsIdle();
+
+	// Clean up of old _throwable
+	if (_throwable.IsValid()) {
+		if (!isValidTarget || !isSameActor) {
+			_throwable->ToggleHighlight(false);
+			_throwable = nullptr;
+		}
+	}
+
+	if (isValidTarget) {
+		if (!_throwable.IsValid()) {
+			_throwable = hitThrowable;
+			_throwable->ToggleHighlight(true);
+		}
+	}
+
+	if (_characterThrowState == ECharacterThrowState::RequestingPull) {
+		// You can't pull while sprinting or while having a throwable ready to be thrown
+		if (GetVelocity().SizeSquared() >= 100.0f) {
+			return;
+		}
+
+		if (_throwable.IsValid() && _throwable->Pull(this)) {
+			_characterThrowState = ECharacterThrowState::Pulling;
+			_throwable = nullptr;
+		}
+	}
 }
 
 void ATantrumCharacterBase::_onMontageBlendingOut(UAnimMontage* montage, bool bInterrupted) {

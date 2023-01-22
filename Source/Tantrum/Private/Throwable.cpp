@@ -5,6 +5,7 @@
 
 #include "Components/CapsuleComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "TantrumCharacterBase.h"
 
 AThrowable::AThrowable() {
 	PrimaryActorTick.bCanEverTick = false;
@@ -39,16 +40,14 @@ bool AThrowable::Pull(TWeakObjectPtr<ACharacter> pullCharacter) {
 }
 
 void AThrowable::Drop() {
-	if (_state == EThrowState::Pull || _state == EThrowState::Attached) {
-		if (_state == EThrowState::Attached) {
-			DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
-		}
-
-		_projectileMovementC->Activate(true);
-		_projectileMovementC->HomingTargetComponent = nullptr;
-		// _onProjectileStop() will take care of setting the state to idle once the projectile will stop bouncing on the ground
-		_state = EThrowState::Dropped;
+	if (_state == EThrowState::Attached) {
+		DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 	}
+
+	_projectileMovementC->Activate(true);
+	_projectileMovementC->HomingTargetComponent = nullptr;
+	// _onProjectileStop() will take care of setting the state to idle once the projectile will stop bouncing on the ground
+	_state = EThrowState::Dropped;
 }
 
 void AThrowable::Throw(const FVector& throwDirection) {
@@ -79,14 +78,21 @@ void AThrowable::NotifyHit(UPrimitiveComponent* myComp, AActor* other, UPrimitiv
 	}
 
 	if (_state == EThrowState::Pull) {
+
 		if (other == _pullCharacter) {
 			AttachToComponent(_pullCharacter->GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("Throwable Attach"));
 			SetOwner(_pullCharacter.Get());
 			_projectileMovementC->Deactivate();
 			_state = EThrowState::Attached;
-			// character->OnThrowableAttached(this);
+			// TODO: replace this with a delegate broadcast
+			if (const auto tantrumChar = Cast<ATantrumCharacterBase>(_pullCharacter)) {
+				tantrumChar->OnThrowableAttached(this);
+			}
 		} else {
-			// character->ResetThrowableObject();
+			// TODO: replace this with a delegate broadcast
+			if (const auto tantrumChar = Cast<ATantrumCharacterBase>(_pullCharacter)) {
+				tantrumChar->ResetThrowableObject(this);
+			}
 			_state = EThrowState::Dropped;
 		}
 	}
@@ -98,10 +104,20 @@ void AThrowable::NotifyHit(UPrimitiveComponent* myComp, AActor* other, UPrimitiv
 	_pullCharacter = nullptr;
 }
 
+void AThrowable::ToggleHighlight(bool bIsOn) {
+	_staticMeshC->SetRenderCustomDepth(bIsOn);
+}
+
 void AThrowable::BeginPlay() {
 	Super::BeginPlay();
 
 	_projectileMovementC->OnProjectileStop.AddDynamic(this, &AThrowable::_projectileStop);
+}
+
+void AThrowable::EndPlay(EEndPlayReason::Type endPlayReason) {
+	_projectileMovementC->OnProjectileStop.RemoveDynamic(this, &AThrowable::_projectileStop);
+
+	Super::EndPlay(endPlayReason);
 }
 
 bool AThrowable::_setHomingTarget(TWeakObjectPtr<AActor> target) {

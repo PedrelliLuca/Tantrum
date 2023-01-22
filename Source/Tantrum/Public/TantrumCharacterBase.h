@@ -57,6 +57,12 @@ private:
 	bool _playThrowMontage();
 	void _resetThrowable();
 
+	void _sphereCastPlayerView();
+	void _sphereCastActorTransform();
+	void _lineCastActorTransform();
+
+	void _processTraceResult(const FHitResult& hitResult);
+
 	void _onMontageBlendingOut(UAnimMontage* montage, bool bInterrupted);
 	void _onMontageEnded(UAnimMontage* montage, bool bInterrupted);
 	void _unbindMontage();
@@ -68,6 +74,15 @@ private:
 	ECharacterThrowState _characterThrowState = ECharacterThrowState::None;
 
 	TWeakObjectPtr<AThrowable> _throwable = nullptr;
+
+	UPROPERTY(EditAnywhere, Category = "Throw", meta = (ClampMin = "0.0"))
+	float _pullRange = 1000.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Throw", meta = (ClampMin = "0.0"))
+	float _pullSphereTraceRadius = 70.0f;
+
+	UPROPERTY(EditAnywhere, Category = "Throw", meta = (ClampMin = "0.0"))
+	float _debugPointRadius = 70.0f;
 
 	UPROPERTY(EditAnywhere, Category = "Throw", meta = (ClampMin = "0.0"))
 	float _throwSpeed = 2000.0f;

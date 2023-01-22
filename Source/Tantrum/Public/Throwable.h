@@ -34,10 +34,14 @@ public:
 	*/
 	void NotifyHit(UPrimitiveComponent* myComp, AActor* other, UPrimitiveComponent* otherComp, bool bSelfMoved, FVector hitLocation, FVector hitNormal, FVector normalImpulse, const FHitResult& hit) override;
 
+	void ToggleHighlight(bool bIsOn);
+
 	FOnThrowableAttached& OnThrowableAttached() { return _onThrowableAttached; }
 
 protected:
 	void BeginPlay() override;
+
+	void EndPlay(EEndPlayReason::Type endPlayReason) override;
 
 	UPROPERTY(EditAnywhere, Category = "Throwable")
 	float _initialZVelocity = 1000.0f;
