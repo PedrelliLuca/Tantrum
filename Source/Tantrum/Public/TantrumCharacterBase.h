@@ -3,14 +3,23 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Camera/CameraComponent.h"
 
+#include "Animation/AnimMontage.h"
+#include "Camera/CameraComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "ThrowAbilityComponent.h"
-#include "Animation/AnimMontage.h"
+#include "Throwable.h"
 
 #include "TantrumCharacterBase.generated.h"
+
+UENUM(BlueprintType)
+enum class ECharacterThrowState : uint8 {
+	None           UMETA(DisplayName = "None"),
+	RequestingPull UMETA(DisplayName = "Requesting Pull"),
+	Pulling        UMETA(DisplayName = "Pulling"),
+	Attached       UMETA(DisplayName = "Attached"),
+	Throwing       UMETA(DisplayName = "Throwing"),
+};
 
 UCLASS()
 class TANTRUM_API ATantrumCharacterBase : public ACharacter {
@@ -20,13 +29,18 @@ public:
 	ATantrumCharacterBase();
 
 	UFUNCTION(BlueprintPure)
-	bool IsPullingObject() const { return false; }
+	bool IsPullingObject() const;
 
 	void RequestPull();
 	void RequestPullCancelation();
 
 	bool CanThrow() const;
 	void RequestThrow();
+
+	// TODO: I don't like this because it needs to be called from AThrowable, and I don't want that class to know about this one.
+	// Change things to use a delegate (the throwable can be set when the pull starts, not necessarily when the attachment occurs. Meaning that we can bind to some 
+	// AThrowable delegate when the pulling start). This function shoud also dispatch to _resetThrowableObject() if needed, see commented logic in AThrowable::NotifyHit()
+	void OnThrowableAttached(TWeakObjectPtr<AThrowable> throwable);
 
 	void Tick(float deltaSeconds) override;
 
@@ -39,8 +53,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = Camera)
 	TObjectPtr<UCameraComponent> _followCamera;
 
-	TObjectPtr<UThrowAbilityComponent> _throwAbilityC;
-
 private:
 	bool _playThrowMontage();
 	void _resetThrowable();
@@ -52,8 +64,8 @@ private:
 	void _onNotifyBeginReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload);
 	void _onNotifyEndReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload);
 
-	//UPROPERTY(VisibleAnywhere, Category = "Throw")
-	//ECharacterThrowState _characterThrowState = ECharacterThrowState::None;
+	UPROPERTY(VisibleAnywhere, Category = "Throw")
+	ECharacterThrowState _characterThrowState = ECharacterThrowState::None;
 
 	TWeakObjectPtr<AThrowable> _throwable = nullptr;
 

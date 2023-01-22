@@ -35,14 +35,16 @@ ATantrumCharacterBase::ATantrumCharacterBase() {
 	_followCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	_followCamera->SetupAttachment(_cameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	_followCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+}
 
-	_throwAbilityC = CreateDefaultSubobject<UThrowAbilityComponent>(TEXT("ThrowAbility"));
+bool ATantrumCharacterBase::IsPullingObject() const {
+	return _characterThrowState == ECharacterThrowState::RequestingPull || _characterThrowState == ECharacterThrowState::Pulling;
 }
 
 void ATantrumCharacterBase::RequestPull() {
-	/*if (!bIsStunned && _characterThrowState == ECharacterThrowState::None) {
+	if (/*!bIsStunned &&*/ _characterThrowState == ECharacterThrowState::None) {
 		_characterThrowState = ECharacterThrowState::RequestingPull;
-	}*/
+	}
 
 	// You can't pull while sprinting or while having a throwable ready to be thrown
 	/*if (GetOwner()->GetVelocity().SizeSquared() >= 100.0f) {
@@ -56,11 +58,15 @@ void ATantrumCharacterBase::RequestPull() {
 }
 
 void ATantrumCharacterBase::RequestPullCancelation() {
+	// This makes the animation of the pull stop via IsPullingObject()
+	if (_characterThrowState == ECharacterThrowState::RequestingPull) {
+		_characterThrowState = ECharacterThrowState::None;
+	}
 }
 
 
 bool ATantrumCharacterBase::CanThrow() const {
-	return true;
+	return _characterThrowState == ECharacterThrowState::Attached;
 }
 
 void ATantrumCharacterBase::RequestThrow() {
@@ -68,18 +74,20 @@ void ATantrumCharacterBase::RequestThrow() {
 		return;
 	}
 
-	/*if (_playThrowMontage()) {
+	if (_playThrowMontage()) {
 		_characterThrowState = ECharacterThrowState::Throwing;
 	} else {
 		_resetThrowable();
-	}*/
+	}
+}
 
-	const auto throwableRoot = Cast<UPrimitiveComponent>(_throwable->GetRootComponent());
-	check(IsValid(throwableRoot));
-	throwableRoot->IgnoreActorWhenMoving(GetOwner(), true);
-
-	const auto throwDirection = GetOwner()->GetActorForwardVector() * _throwSpeed;
-	_throwable->Throw(throwDirection);
+// TODO: I don't like this because it needs to be called from AThrowable, and I don't want that class to know about this one.
+// Change things to use a delegate (the throwable can be set when the pull starts, not necessarily when the attachment occurs. Meaning that we can bind to some 
+// AThrowable delegate when the pulling start). This function shoud also dispatch to _resetThrowableObject() if needed, see commented logic in AThrowable::NotifyHit()
+void ATantrumCharacterBase::OnThrowableAttached(TWeakObjectPtr<AThrowable> throwable) {
+	_characterThrowState = ECharacterThrowState::Attached;
+	_throwable = MoveTemp(throwable);
+	MoveIgnoreActorAdd(_throwable.Get());
 }
 
 void ATantrumCharacterBase::Tick(float deltaSeconds) {
@@ -125,12 +133,15 @@ bool ATantrumCharacterBase::_playThrowMontage() {
 	}
 
 	return bPlayedSuccessfully;
-
-
-	//return true;
 }
 
 void ATantrumCharacterBase::_resetThrowable() {
+	if (_throwable.IsValid()) {
+		_throwable->Drop();
+	}
+
+	_characterThrowState = ECharacterThrowState::None;
+	_throwable = nullptr;
 }
 
 void ATantrumCharacterBase::_onMontageBlendingOut(UAnimMontage* montage, bool bInterrupted) {

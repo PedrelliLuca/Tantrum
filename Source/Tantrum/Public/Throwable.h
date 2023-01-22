@@ -10,6 +10,9 @@
 
 #include "Throwable.generated.h"
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnThrowableAttached, ACharacter*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnThrowableAttached, ACharacter*);
+
 UCLASS()
 class TANTRUM_API AThrowable : public AActor {
 	GENERATED_BODY()
@@ -19,12 +22,19 @@ public:
 
 	bool Pull(TWeakObjectPtr<ACharacter> pullCharacter);
 
+	void Drop();
+
 	void Throw(const FVector& throwDirection);
+
+	UFUNCTION(BlueprintPure)
+	bool IsIdle() const { return _state == EThrowState::Idle; }
 
 	/**
 	* \brief Attaches this component to other actor if other is the _pullCharacter
 	*/
 	void NotifyHit(UPrimitiveComponent* myComp, AActor* other, UPrimitiveComponent* otherComp, bool bSelfMoved, FVector hitLocation, FVector hitNormal, FVector normalImpulse, const FHitResult& hit) override;
+
+	FOnThrowableAttached& OnThrowableAttached() { return _onThrowableAttached; }
 
 protected:
 	void BeginPlay() override;
@@ -35,6 +45,9 @@ protected:
 private:
 	bool _setHomingTarget(TWeakObjectPtr<AActor> target);
 
+	UFUNCTION()
+	void _projectileStop(const FHitResult& impactResult);
+
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr<UStaticMeshComponent> _staticMeshC;
 
@@ -43,4 +56,16 @@ private:
 
 	// The actor that will pull this throwable
 	TWeakObjectPtr<ACharacter> _pullCharacter = nullptr;
+
+	enum class EThrowState : uint8 {
+		Idle,
+		Pull,
+		Attached,
+		Throw,
+		Dropped,
+	};
+
+	EThrowState _state = EThrowState::Idle;
+
+	FOnThrowableAttached _onThrowableAttached;
 };

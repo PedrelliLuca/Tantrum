@@ -5,7 +5,6 @@
 
 #include "Components/CapsuleComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "ThrowableSystem.h"
 
 AThrowable::AThrowable() {
 	PrimaryActorTick.bCanEverTick = false;
@@ -25,13 +24,13 @@ AThrowable::AThrowable() {
 bool AThrowable::Pull(TWeakObjectPtr<ACharacter> pullCharacter) {
 	check(pullCharacter.IsValid());
 
-	/*if (_state != EThrowState::Idle) {
+	if (_state != EThrowState::Idle) {
 		return false;
-	}*/
+	}
 
 	if (_setHomingTarget(pullCharacter)) {
 		// ToggleHighlight(false);
-		// _state = EThrowState::Pull;
+		_state = EThrowState::Pull;
 		_pullCharacter = MoveTemp(pullCharacter);
 		return true;
 	}
@@ -39,44 +38,61 @@ bool AThrowable::Pull(TWeakObjectPtr<ACharacter> pullCharacter) {
 	return false;
 }
 
+void AThrowable::Drop() {
+	if (_state == EThrowState::Pull || _state == EThrowState::Attached) {
+		if (_state == EThrowState::Attached) {
+			DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		}
+
+		_projectileMovementC->Activate(true);
+		_projectileMovementC->HomingTargetComponent = nullptr;
+		// _onProjectileStop() will take care of setting the state to idle once the projectile will stop bouncing on the ground
+		_state = EThrowState::Dropped;
+	}
+}
+
 void AThrowable::Throw(const FVector& throwDirection) {
-	// if (_state == EThrowState::Pull || _state == EThrowState::Attached) { ... all the code below }
+	if (_state == EThrowState::Pull || _state == EThrowState::Attached) {
+		DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 
-	DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+		_projectileMovementC->Activate(true);
+		_projectileMovementC->HomingTargetComponent = nullptr;
 
-	_projectileMovementC->Activate(true);
-	_projectileMovementC->HomingTargetComponent = nullptr;
+		_state = EThrowState::Throw;
 
-	// _state = EThrowState::Throw;
+		// TODO: add AActor* target input that can be optionally set. If set, its root component is chosen as new HomingTargetComponent
 
-	// TODO: add AActor* target input that can be optionally set. If set, its root component is chosen as new HomingTargetComponent
-
-	_projectileMovementC->Velocity = throwDirection + FVector::UpVector * _initialZVelocity;
+		_projectileMovementC->Velocity = throwDirection + FVector::UpVector * _initialZVelocity;
+	}
 }
 
 void AThrowable::NotifyHit(UPrimitiveComponent* myComp, AActor* other, UPrimitiveComponent* otherComp, bool bSelfMoved, FVector hitLocation, FVector hitNormal, FVector normalImpulse, const FHitResult& hit) {
 	Super::NotifyHit(myComp, other, otherComp, bSelfMoved, hitLocation, hitNormal, normalImpulse, hit);
-	/*if (_state == EThrowState::Idle || _state == EThrowState::Attached || _state == EThrowState::Dropped) {
+
+	if (_state == EThrowState::Idle || _state == EThrowState::Attached || _state == EThrowState::Dropped) {
 		return;
-	}*/
+	}
 
 	if (!_pullCharacter.IsValid()) {
 		UE_LOG(LogTemp, Warning, TEXT("%s: Invalid _pullCharacter"), __FUNCTION__);
 		return;
 	}
 
-	// if (_state == EThrowState::Pull) { ... if-else below ... }
-
-	if (other == _pullCharacter) {
-		AttachToComponent(_pullCharacter->GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("Throwable Attach"));
-		SetOwner(_pullCharacter.Get());
-		_projectileMovementC->Deactivate();
-		// _state = EThrowState::Attached;
-		// character->OnThrowableAttached();
-	} else {
-		// character->ResetThrowableObject();
-		// _state = EThrowState::Dropped;
+	if (_state == EThrowState::Pull) {
+		if (other == _pullCharacter) {
+			AttachToComponent(_pullCharacter->GetCapsuleComponent(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("Throwable Attach"));
+			SetOwner(_pullCharacter.Get());
+			_projectileMovementC->Deactivate();
+			_state = EThrowState::Attached;
+			// character->OnThrowableAttached(this);
+		} else {
+			// character->ResetThrowableObject();
+			_state = EThrowState::Dropped;
+		}
 	}
+
+	// To avoid calling tantrum character's OnThowableAttached() and ResetThrowableObject()
+	_onThrowableAttached.Broadcast(_pullCharacter.Get());
 	
 	_projectileMovementC->HomingTargetComponent = nullptr;
 	_pullCharacter = nullptr;
@@ -85,8 +101,7 @@ void AThrowable::NotifyHit(UPrimitiveComponent* myComp, AActor* other, UPrimitiv
 void AThrowable::BeginPlay() {
 	Super::BeginPlay();
 
-	const auto throwSystem = UGameplayStatics::GetGameInstance(GetWorld())->GetSubsystem<UThrowableSystem>();
-	throwSystem->AddThrowable(this);
+	_projectileMovementC->OnProjectileStop.AddDynamic(this, &AThrowable::_projectileStop);
 }
 
 bool AThrowable::_setHomingTarget(TWeakObjectPtr<AActor> target) {
@@ -101,4 +116,10 @@ bool AThrowable::_setHomingTarget(TWeakObjectPtr<AActor> target) {
 	}
 
 	return false;
+}
+
+void AThrowable::_projectileStop(const FHitResult& impactResult) {
+	if (_state == EThrowState::Throw || _state == EThrowState::Dropped) {
+		_state = EThrowState::Idle;
+	}
 }
