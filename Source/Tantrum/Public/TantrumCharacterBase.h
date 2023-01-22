@@ -36,6 +36,9 @@ public:
 
 	bool CanThrow() const;
 	void RequestThrow();
+	
+	// TODO: I don't like this because it needs to be called from AThrowable, and I don't want that class to know about this one.
+	void ResetThrowableObject();
 
 	// TODO: I don't like this because it needs to be called from AThrowable, and I don't want that class to know about this one.
 	// Change things to use a delegate (the throwable can be set when the pull starts, not necessarily when the attachment occurs. Meaning that we can bind to some 

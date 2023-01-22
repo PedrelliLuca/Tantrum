@@ -91,7 +91,7 @@ void AThrowable::NotifyHit(UPrimitiveComponent* myComp, AActor* other, UPrimitiv
 		} else {
 			// TODO: replace this with a delegate broadcast
 			if (const auto tantrumChar = Cast<ATantrumCharacterBase>(_pullCharacter)) {
-				tantrumChar->ResetThrowableObject(this);
+				tantrumChar->ResetThrowableObject();
 			}
 			_state = EThrowState::Dropped;
 		}

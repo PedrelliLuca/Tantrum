@@ -36,6 +36,8 @@ static TAutoConsoleVariable<bool> CVarDisplayThrowVelocity(
 );
 
 ATantrumCharacterBase::ATantrumCharacterBase() {
+	PrimaryActorTick.bCanEverTick = true;
+
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 		
 	// Do not rotate when the controller rotates.
@@ -101,6 +103,15 @@ void ATantrumCharacterBase::RequestThrow() {
 }
 
 // TODO: I don't like this because it needs to be called from AThrowable, and I don't want that class to know about this one.
+void ATantrumCharacterBase::ResetThrowableObject() {
+	if (_throwable.IsValid()) {
+		_throwable->Drop();
+	}
+	_characterThrowState = ECharacterThrowState::None;
+	_throwable = nullptr;
+}
+
+// TODO: I don't like this because it needs to be called from AThrowable, and I don't want that class to know about this one.
 // Change things to use a delegate (the throwable can be set when the pull starts, not necessarily when the attachment occurs. Meaning that we can bind to some 
 // AThrowable delegate when the pulling start). This function shoud also dispatch to _resetThrowableObject() if needed, see commented logic in AThrowable::NotifyHit()
 void ATantrumCharacterBase::OnThrowableAttached(TWeakObjectPtr<AThrowable> throwable) {
@@ -120,6 +131,8 @@ void ATantrumCharacterBase::Tick(float deltaSeconds) {
 	if (_characterThrowState == ECharacterThrowState::Throwing) {
 		if (const auto animInstance = GetMesh()->GetAnimInstance()) {
 			if (const auto animMontage = animInstance->GetCurrentActiveMontage()) {
+				// The montage speed is determined by the curve in the uasset. By speeding up on certain parts, the fact that the
+				// character is throwing an object is more apparent.
 				const float playRate = animInstance->GetCurveValue(TEXT("ThrowCurve"));
 				animInstance->Montage_SetPlayRate(animMontage, playRate);
 			}
@@ -201,7 +214,6 @@ void ATantrumCharacterBase::_sphereCastPlayerView() {
 			_throwable->ToggleHighlight(false);
 			_throwable = nullptr;
 		}
-
 		return;
 	}
 
@@ -233,7 +245,7 @@ void ATantrumCharacterBase::_sphereCastActorTransform() {
 	const auto debugTrace = CVarDisplayTrace->GetBool() ? EDrawDebugTrace::ForOneFrame : EDrawDebugTrace::None;
 	FHitResult hitResult;
 
-	UKismetSystemLibrary::SphereTraceSingle(GetWorld(), startLoc, endLoc, _debugPointRadius, UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_Visibility), false, {}, debugTrace, hitResult, true);
+	UKismetSystemLibrary::SphereTraceSingle(GetWorld(), startLoc, endLoc, _debugPointRadius, UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_Visibility), false, TArray<AActor*>{}, debugTrace, hitResult, true);
 	_processTraceResult(hitResult);
 }
 
@@ -291,7 +303,7 @@ void ATantrumCharacterBase::_onMontageBlendingOut(UAnimMontage* montage, bool bI
 
 void ATantrumCharacterBase::_onMontageEnded(UAnimMontage* montage, bool bInterrupted) {
 	_unbindMontage();
-	// _characterThrowState = ECharacterThrowState::None;
+	_characterThrowState = ECharacterThrowState::None;
 	MoveIgnoreActorRemove(_throwable.Get());
 
 	if (_throwable->GetRootComponent()) {
@@ -304,10 +316,14 @@ void ATantrumCharacterBase::_onMontageEnded(UAnimMontage* montage, bool bInterru
 }
 
 void ATantrumCharacterBase::_unbindMontage() {
+	if (const auto animInstance = GetMesh()->GetAnimInstance()) {
+		animInstance->OnPlayMontageNotifyBegin.RemoveDynamic(this, &ATantrumCharacterBase::_onNotifyBeginReceived);
+		animInstance->OnPlayMontageNotifyEnd.RemoveDynamic(this, &ATantrumCharacterBase::_onNotifyEndReceived);
+	}
 }
 
 void ATantrumCharacterBase::_onNotifyBeginReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload) {
-	if (!(notifyName == "ThrowNotify")) {
+	if (notifyName != TEXT("ThrowNotify")) {
 		return;
 	}
 
@@ -315,9 +331,14 @@ void ATantrumCharacterBase::_onNotifyBeginReceived(FName notifyName, const FBran
 		if (const auto throwableRoot = Cast<UPrimitiveComponent>(_throwable->GetRootComponent())) {
 			throwableRoot->IgnoreActorWhenMoving(this, true);
 		}
+	}
 
-		const auto throwDirection = GetActorForwardVector() * _throwSpeed;
-		_throwable->Throw(throwDirection);
+	const auto throwDirection = GetActorForwardVector() * _throwSpeed;
+	_throwable->Throw(throwDirection);
+
+	if (CVarDisplayThrowVelocity->GetBool()) {
+		const auto start = GetMesh()->GetSocketLocation(TEXT("ObjectAttach"));
+		DrawDebugLine(GetWorld(), start, start + throwDirection, FColor::Red, false, 5.0f);
 	}
 }
 
