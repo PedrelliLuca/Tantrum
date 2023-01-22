@@ -13,7 +13,7 @@ static TAutoConsoleVariable<bool> CVarDisplayLaunchInputDelta(
 	TEXT("Tantrum.Character.Debug.DisplayLaunchInputDelta"),
 	false,
 	TEXT("Display Launch Input Delta"),
-	ECVF_Default,
+	ECVF_Default
 );
 
 ATantrumPlayerController::ATantrumPlayerController() {

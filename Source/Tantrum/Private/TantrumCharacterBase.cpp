@@ -202,7 +202,7 @@ void ATantrumCharacterBase::_sphereCastPlayerView() {
 
 	const auto playerViewForward = rotation.Vector();
 	const auto additionalDistance = (location - GetActorLocation()).Size(); // player to camera distance
-	const auto endLocation = location + (playerViewForward * _pullRange + additionalDistance);
+	const auto endLocation = location + (playerViewForward * (_pullRange + additionalDistance));
 
 	const auto forwardVector = GetActorForwardVector();
 	const auto dotProduct = FVector::DotProduct(playerViewForward, forwardVector);
