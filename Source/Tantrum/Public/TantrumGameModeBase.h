@@ -12,7 +12,7 @@ enum class EGameState : uint8 {
 	Waiting  UMETA(DisplayName = "Waiting"),
 	Playing  UMETA(DisplayName = "Playing"),
 	Paused   UMETA(DisplayName = "Paused"),
-	GameOver UMETA(DisplayName = "Game Over"),
+	GameOver UMETA(DisplayName = "Game Over")
 };
 
 /**
@@ -29,12 +29,12 @@ public:
 protected:
 	void BeginPlay() override;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	EGameState _gameState = EGameState::None;
+
 private:
 	void _displayCountdown();
 	void _startGame();
-
-	UPROPERTY(VisibleAnywhere)
-	EGameState _gameState = EGameState::None;
 	
 	UPROPERTY(EditAnywhere)
 	float _gameCountdownDuration = 2.0f;

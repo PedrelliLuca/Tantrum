@@ -16,9 +16,6 @@ static TAutoConsoleVariable<bool> CVarDisplayLaunchInputDelta(
 	ECVF_Default
 );
 
-ATantrumPlayerController::ATantrumPlayerController() {
-}
-
 
 void ATantrumPlayerController::BeginPlay() {
 	Super::BeginPlay();
@@ -28,6 +25,9 @@ void ATantrumPlayerController::BeginPlay() {
 		// The 0 priority will make the _defaultMappingContext easily overridable by other contexts
 		subsystem->AddMappingContext(_defaultMappingContext, 0);
 	}
+
+	_gameMode = Cast<ATantrumGameModeBase>(GetWorld()->GetAuthGameMode());
+	check(_gameMode.IsValid());
 }
 
 void ATantrumPlayerController::SetupInputComponent() {
@@ -79,6 +79,11 @@ void ATantrumPlayerController::_stopJumping() {
 }
 
 void ATantrumPlayerController::_move(const FInputActionValue& value) {
+	check(_gameMode.IsValid());
+	if (_gameMode->GetCurrentGameState() != EGameState::Playing) {
+		return;
+	}
+
 	const auto movementVector = value.Get<FVector2D>();
 
 	const auto pawn = GetPawn();
@@ -89,6 +94,8 @@ void ATantrumPlayerController::_move(const FInputActionValue& value) {
 }
 
 void ATantrumPlayerController::_look(const FInputActionValue& value) {
+	// We don't check for the game state here, we want the player to be able to look around even when not playing.
+
 	const auto lookAxisVector = value.Get<FVector2D>();
 
 	const auto pawn = GetPawn();
@@ -99,6 +106,11 @@ void ATantrumPlayerController::_look(const FInputActionValue& value) {
 }
 
 void ATantrumPlayerController::_sprintTriggered() {
+	check(_gameMode.IsValid());
+	if (_gameMode->GetCurrentGameState() != EGameState::Playing) {
+		return;
+	}
+
 	if (const auto tantrumChar = Cast<ATantrumCharacterBase>(GetCharacter())) {
 		tantrumChar->RequestSprint();
 	}
@@ -111,6 +123,11 @@ void ATantrumPlayerController::_sprintCanceled() {
 }
 
 void ATantrumPlayerController::_crouchTriggered() {
+	check(_gameMode.IsValid());
+	if (_gameMode->GetCurrentGameState() != EGameState::Playing) {
+		return;
+	}
+
 	const auto character = GetCharacter();
 	check(IsValid(character));
 
@@ -129,6 +146,11 @@ void ATantrumPlayerController::_crouchCanceled() {
 }
 
 void ATantrumPlayerController::_pullTriggered() {
+	check(_gameMode.IsValid());
+	if (_gameMode->GetCurrentGameState() != EGameState::Playing) {
+		return;
+	}
+
 	if (const auto tantrumChar = Cast<ATantrumCharacterBase>(GetCharacter())) {
 		tantrumChar->RequestPull();
 	}
@@ -141,6 +163,11 @@ void ATantrumPlayerController::_pullCanceled() {
 }
 
 void ATantrumPlayerController::_throw(const FInputActionValue& value) {
+	check(_gameMode.IsValid());
+	if (_gameMode->GetCurrentGameState() != EGameState::Playing) {
+		return;
+	}
+
 	const auto throwAxis = value.Get<float>();
 
 	if (const auto tantrumChar = Cast<ATantrumCharacterBase>(GetCharacter())) {

@@ -6,6 +6,7 @@
 
 #include "GameFramework/PlayerController.h"
 #include "InputMappingContext.h"
+#include "TantrumGameModeBase.h"
 
 #include "TantrumPlayerController.generated.h"
 
@@ -16,9 +17,6 @@ UCLASS()
 class TANTRUM_API ATantrumPlayerController : public APlayerController {
 	GENERATED_BODY()
 
-public:
-	ATantrumPlayerController();
-	
 protected:
 	void BeginPlay() override;
 	
@@ -72,4 +70,6 @@ private:
 	void _throw(const FInputActionValue& value);
 
 	float _lastThrowAxis = 0;
+
+	TWeakObjectPtr<ATantrumGameModeBase> _gameMode = nullptr;
 };
