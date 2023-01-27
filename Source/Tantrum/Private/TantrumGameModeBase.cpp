@@ -1,6 +1,7 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 
+#include "Kismet/GameplayStatics.h"
 #include "TantrumGameModeBase.h"
 
 EGameState ATantrumGameModeBase::GetCurrentGameState() const {
@@ -24,7 +25,14 @@ void ATantrumGameModeBase::BeginPlay() {
 }
 
 void ATantrumGameModeBase::_displayCountdown() {
-    // TODO: Create and store display widget.
+    if (!IsValid(_gameWidgetClass)) {
+        UE_LOG(LogTemp, Error, TEXT("%s: missing game widget class!!"), *FString{__FUNCTION__});
+        return;
+    }
+
+    _gameWidget = CreateWidget<UTantrumGameWidget>(UGameplayStatics::GetPlayerController(GetWorld(), 0), _gameWidgetClass, TEXT("Game Widget"));
+    _gameWidget->AddToViewport();
+    _gameWidget->StartCountdown(_gameCountdownDuration, this);
 }
 
 void ATantrumGameModeBase::_startGame() {

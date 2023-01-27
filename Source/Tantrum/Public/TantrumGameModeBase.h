@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
+#include "TantrumGameWidget.h"
+
 #include "TantrumGameModeBase.generated.h"
 
 UENUM(BlueprintType)
@@ -23,13 +25,15 @@ class TANTRUM_API ATantrumGameModeBase : public AGameModeBase {
 	GENERATED_BODY()
 
 public:
+	UFUNCTION(BlueprintPure)
 	EGameState GetCurrentGameState() const;
+
 	void PlayerReachedEnd();
 
 protected:
 	void BeginPlay() override;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	UPROPERTY(VisibleAnywhere)
 	EGameState _gameState = EGameState::None;
 
 private:
@@ -38,4 +42,11 @@ private:
 	
 	UPROPERTY(EditAnywhere)
 	float _gameCountdownDuration = 2.0f;
+
+	UPROPERTY()
+	TObjectPtr<UTantrumGameWidget> _gameWidget = nullptr;
+
+	UPROPERTY(EditAnywhere, Category = "Widget")
+	TSubclassOf<UTantrumGameWidget> _gameWidgetClass = nullptr;
+
 };
