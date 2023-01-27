@@ -11,7 +11,12 @@ EGameState ATantrumGameModeBase::GetCurrentGameState() const {
 void ATantrumGameModeBase::PlayerReachedEnd() {
     _gameState = EGameState::GameOver;
 
-    // TODO: Update widget here
+    _gameWidget->LevelComplete();
+    FInputModeUIOnly inputMode;
+
+    const auto pc = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+    pc->SetInputMode(inputMode);
+    pc->SetShowMouseCursor(true);
 }
 
 void ATantrumGameModeBase::BeginPlay() {
@@ -36,5 +41,12 @@ void ATantrumGameModeBase::_displayCountdown() {
 }
 
 void ATantrumGameModeBase::_startGame() {
+    // This is needed, otherwise if you restart the level via "retry" button you'll still be in UIOnly mode.
+    FInputModeGameOnly inputMode;
+    
+    const auto pc = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+    pc->SetInputMode(inputMode);
+    pc->SetShowMouseCursor(true);
+
     _gameState = EGameState::Playing;
 }
