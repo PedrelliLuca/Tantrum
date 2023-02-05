@@ -8,6 +8,7 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "InteractInterface.h"
 #include "Throwable.h"
 
 #include "TantrumCharacterBase.generated.h"
@@ -22,7 +23,7 @@ enum class ECharacterThrowState : uint8 {
 };
 
 UCLASS()
-class TANTRUM_API ATantrumCharacterBase : public ACharacter {
+class TANTRUM_API ATantrumCharacterBase : public ACharacter, public IInteractInterface {
 	GENERATED_BODY()
 
 public:
@@ -44,7 +45,13 @@ public:
 
 	void Tick(float deltaSeconds) override;
 
+	void ApplyEffect_Implementation(EEffectType effectType, bool bIsBuff) override;
+
+	void EndEffect();
+
 protected:
+	void BeginPlay() override;
+
 	/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, Category = Camera)
 	TObjectPtr<USpringArmComponent> _cameraBoom;
@@ -123,4 +130,11 @@ private:
 
 	FOnMontageBlendingOutStarted _blendingOutDelegate;
 	FOnMontageEnded _montageEndedDelegate;
+
+	bool _bIsUnderEffect = false;
+	bool _bIsEffectBuff = false;
+
+	UPROPERTY(EditAnywhere, Category = "Effects", meta = (ClampMin = "0.0"))
+	float _defaultEffectCooldown = 5.0f;
+	float _effectCooldown = 0.0f;
 };

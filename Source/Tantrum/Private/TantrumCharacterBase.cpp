@@ -139,12 +139,22 @@ void ATantrumCharacterBase::RequestThrow() {
 	}
 }
 
-void ATantrumCharacterBase::Tick(float deltaSeconds) {
+void ATantrumCharacterBase::Tick(const float deltaSeconds) {
 	Super::Tick(deltaSeconds);
 
 	_updateStun(deltaSeconds);
 	if (_isStunned()) {
 		return;
+	} 
+
+	if (_bIsUnderEffect) {
+		if (_effectCooldown > 0.0f) {
+			_effectCooldown -= deltaSeconds;
+		} else {
+			_bIsUnderEffect = false;
+			_effectCooldown = _defaultEffectCooldown;
+			EndEffect();
+		}
 	}
 
 	if (_characterThrowState == ECharacterThrowState::Throwing) {
@@ -176,6 +186,18 @@ void ATantrumCharacterBase::Tick(float deltaSeconds) {
 			_sphereCastPlayerView();
 		}
 	}
+}
+
+void ATantrumCharacterBase::ApplyEffect_Implementation(EEffectType effectType, bool bIsBuff) {
+}
+
+void ATantrumCharacterBase::EndEffect() {
+}
+
+void ATantrumCharacterBase::BeginPlay() {
+	Super::BeginPlay();
+
+	_effectCooldown = _defaultEffectCooldown;
 }
 
 void ATantrumCharacterBase::_updateStun(const float deltaSeconds) {
