@@ -46,7 +46,7 @@ void ATantrumGameModeBase::_startGame() {
     
     const auto pc = UGameplayStatics::GetPlayerController(GetWorld(), 0);
     pc->SetInputMode(inputMode);
-    pc->SetShowMouseCursor(true);
+    pc->SetShowMouseCursor(false);
 
     _gameState = EGameState::Playing;
 }
