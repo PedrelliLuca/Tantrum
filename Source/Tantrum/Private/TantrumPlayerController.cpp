@@ -187,7 +187,13 @@ void ATantrumPlayerController::_throw(const FInputActionValue& value) {
 		_lastThrowAxis = throwAxis;
 
 		if (delta > _flickThreshold) {
-			tantrumChar->RequestThrow();
+
+			if (throwAxis > 0.0f) {
+				 tantrumChar->RequestThrow();
+			} else {
+				tantrumChar->RequestUseObject();
+			}
+
 		}
 	}
 }

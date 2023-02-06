@@ -40,6 +40,9 @@ public:
 	void RequestPull();
 	void RequestPullCancelation();
 
+	// To use the object rather than throwing it.
+	void RequestUseObject();
+
 	bool CanThrow() const;
 	void RequestThrow();
 
@@ -137,4 +140,6 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Effects", meta = (ClampMin = "0.0"))
 	float _defaultEffectCooldown = 5.0f;
 	float _effectCooldown = 0.0f;
+
+	EEffectType _currentEffect = EEffectType::None;
 };

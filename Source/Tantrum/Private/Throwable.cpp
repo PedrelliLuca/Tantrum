@@ -4,6 +4,7 @@
 #include "Throwable.h"
 
 #include "Components/CapsuleComponent.h"
+#include "InteractInterface.h"
 #include "Kismet/GameplayStatics.h"
 
 AThrowable::AThrowable() {
@@ -71,8 +72,16 @@ void AThrowable::NotifyHit(UPrimitiveComponent* myComp, AActor* other, UPrimitiv
 		return;
 	}
 
+	if (_state == EThrowState::Throw) {
+		const auto interactable = Cast<IInteractInterface>(other);
+		if (interactable) {
+			// We got hit => we're getting debuffed! This is why the 3rd argument is false
+			interactable->Execute_ApplyEffect(other, _effectType, false);
+		}
+	}
+
 	if (!_pullCharacter.IsValid()) {
-		UE_LOG(LogTemp, Warning, TEXT("%s: Invalid _pullCharacter"), __FUNCTION__);
+		UE_LOG(LogTemp, Warning, TEXT("%s: Invalid _pullCharacter"), *FString{ __FUNCTION__ });
 		return;
 	}
 

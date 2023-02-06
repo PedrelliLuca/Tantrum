@@ -28,7 +28,4 @@ class TANTRUM_API IInteractInterface {
 public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interact")
 	void ApplyEffect(EEffectType effectType, bool bIsBuff);
-
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interact")
-	EEffectType UseEffect();
 };

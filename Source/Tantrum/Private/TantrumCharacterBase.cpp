@@ -122,6 +122,12 @@ void ATantrumCharacterBase::RequestPullCancelation() {
 	}
 }
 
+void ATantrumCharacterBase::RequestUseObject() {
+	ApplyEffect_Implementation(_throwable->GetEffectType(), true);
+	_throwable->Destroy();
+	_resetThrowableObject();
+}
+
 
 bool ATantrumCharacterBase::CanThrow() const {
 	return _characterThrowState == ECharacterThrowState::Attached;
@@ -189,9 +195,30 @@ void ATantrumCharacterBase::Tick(const float deltaSeconds) {
 }
 
 void ATantrumCharacterBase::ApplyEffect_Implementation(EEffectType effectType, bool bIsBuff) {
+	if (_bIsUnderEffect) {
+		return;
+	}
+
+	_currentEffect = effectType;
+	_bIsUnderEffect = true;
+	_bIsEffectBuff = bIsBuff;
+
+	switch (_currentEffect) {
+	case EEffectType::Speed:
+		_bIsEffectBuff ? _sprintSpeed *= 2.0f : GetCharacterMovement()->DisableMovement();
+	default:
+		break;
+	}
 }
 
 void ATantrumCharacterBase::EndEffect() {
+	_bIsUnderEffect = false;
+	switch (_currentEffect) {
+	case EEffectType::Speed:
+		_bIsEffectBuff ? _sprintSpeed *= 0.5f, RequestSprintCancelation() : GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	default:
+		break;
+	}
 }
 
 void ATantrumCharacterBase::BeginPlay() {

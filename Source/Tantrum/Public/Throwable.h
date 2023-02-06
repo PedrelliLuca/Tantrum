@@ -7,6 +7,7 @@
 #include "GameFramework/Actor.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/ProjectileMovementComponent.h"
+#include "InteractInterface.h"
 
 #include "Throwable.generated.h"
 
@@ -39,6 +40,8 @@ public:
 
 	FOnThrowableCatched& OnThrowableAttached() { return _onThrowableCatched; }
 	FOnThrowableMissed& OnThrowableMissed() { return _onThrowableMissed; }
+
+	EEffectType GetEffectType() const { return _effectType; }
 
 protected:
 	void BeginPlay() override;
@@ -75,4 +78,7 @@ private:
 
 	FOnThrowableCatched _onThrowableCatched;
 	FOnThrowableMissed _onThrowableMissed;
+
+	UPROPERTY(EditAnywhere, Category="Effect")
+	EEffectType _effectType = EEffectType::None;
 };
