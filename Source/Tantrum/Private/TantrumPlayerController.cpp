@@ -87,10 +87,11 @@ void ATantrumPlayerController::_move(const FInputActionValue& value) {
 	const auto movementVector = value.Get<FVector2D>();
 
 	const auto pawn = GetPawn();
-	check(IsValid(pawn));
 	
-	pawn->AddMovementInput(pawn->GetActorForwardVector(), movementVector.Y);
-	pawn->AddMovementInput(pawn->GetActorRightVector(), movementVector.X);
+	if (IsValid(pawn)) {
+		pawn->AddMovementInput(pawn->GetActorForwardVector(), movementVector.Y);
+		pawn->AddMovementInput(pawn->GetActorRightVector(), movementVector.X);
+	}
 }
 
 void ATantrumPlayerController::_look(const FInputActionValue& value) {
@@ -99,10 +100,10 @@ void ATantrumPlayerController::_look(const FInputActionValue& value) {
 	const auto lookAxisVector = value.Get<FVector2D>();
 
 	const auto pawn = GetPawn();
-	check(IsValid(pawn));
-	
-	pawn->AddControllerYawInput(lookAxisVector.X);
-	pawn->AddControllerPitchInput(lookAxisVector.Y);
+	if (IsValid(pawn)) {
+		pawn->AddControllerYawInput(lookAxisVector.X);
+		pawn->AddControllerPitchInput(lookAxisVector.Y);
+	}
 }
 
 void ATantrumPlayerController::_sprintTriggered() {
