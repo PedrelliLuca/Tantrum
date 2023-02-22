@@ -68,11 +68,11 @@ void AThrowable::Throw(const FVector& throwDirection) {
 void AThrowable::NotifyHit(UPrimitiveComponent* myComp, AActor* other, UPrimitiveComponent* otherComp, bool bSelfMoved, FVector hitLocation, FVector hitNormal, FVector normalImpulse, const FHitResult& hit) {
 	Super::NotifyHit(myComp, other, otherComp, bSelfMoved, hitLocation, hitNormal, normalImpulse, hit);
 
-	if (_state == EThrowState::Idle || _state == EThrowState::Attached || _state == EThrowState::Dropped) {
+	if (_state == EThrowState::Idle || _state == EThrowState::Attached /*|| _state == EThrowState::Dropped*/) {
 		return;
 	}
 
-	if (_state == EThrowState::Throw) {
+	if (_state == EThrowState::Dropped) {
 		const auto interactable = Cast<IInteractInterface>(other);
 		if (interactable) {
 			// We got hit => we're getting debuffed! This is why the 3rd argument is false
