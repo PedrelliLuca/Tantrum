@@ -86,12 +86,28 @@ void ATantrumPlayerController::_move(const FInputActionValue& value) {
 
 	const auto movementVector = value.Get<FVector2D>();
 
-	const auto pawn = GetPawn();
+	/*const auto pawn = GetPawn();
 	
 	if (IsValid(pawn)) {
 		pawn->AddMovementInput(pawn->GetActorForwardVector(), movementVector.Y);
 		pawn->AddMovementInput(pawn->GetActorRightVector(), movementVector.X);
+	}*/
+
+	const auto pawn = GetPawn();
+	
+	if (IsValid(pawn)) {
+		// This may be different from the pawn's rotation
+		const auto rotation = GetControlRotation();
+		const auto yawRotation = FRotator{ 0.0, rotation.Yaw, 0.0 };
+
+		const auto forwardDir = FRotationMatrix{ yawRotation }.GetUnitAxis(EAxis::X);
+		const auto rightDir = FRotationMatrix{ yawRotation }.GetUnitAxis(EAxis::Y);
+
+		pawn->AddMovementInput(forwardDir, movementVector.Y);
+		pawn->AddMovementInput(rightDir, movementVector.X);
 	}
+
+	
 }
 
 void ATantrumPlayerController::_look(const FInputActionValue& value) {
