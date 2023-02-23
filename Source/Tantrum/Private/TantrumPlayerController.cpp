@@ -85,18 +85,10 @@ void ATantrumPlayerController::_move(const FInputActionValue& value) {
 	}
 
 	const auto movementVector = value.Get<FVector2D>();
-
-	/*const auto pawn = GetPawn();
-	
-	if (IsValid(pawn)) {
-		pawn->AddMovementInput(pawn->GetActorForwardVector(), movementVector.Y);
-		pawn->AddMovementInput(pawn->GetActorRightVector(), movementVector.X);
-	}*/
-
 	const auto pawn = GetPawn();
 	
 	if (IsValid(pawn)) {
-		// This may be different from the pawn's rotation
+		// This may be different from the pawn's rotation. Using pawn->GetActorForwardVector() and RightVector() isn't good here
 		const auto rotation = GetControlRotation();
 		const auto yawRotation = FRotator{ 0.0, rotation.Yaw, 0.0 };
 
