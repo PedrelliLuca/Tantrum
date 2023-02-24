@@ -8,15 +8,22 @@ EGameState ATantrumGameModeBase::GetCurrentGameState() const {
     return _gameState;
 }
 
-void ATantrumGameModeBase::PlayerReachedEnd() {
+void ATantrumGameModeBase::PlayerReachedEnd(APlayerController* controller) {
     _gameState = EGameState::GameOver;
 
-    _gameWidget->LevelComplete();
+    const auto gameWidget = _gameWidgets.Find(controller);
+    check(gameWidget != nullptr);
+
+    (*gameWidget)->LevelComplete();
     FInputModeUIOnly inputMode;
 
     const auto pc = UGameplayStatics::GetPlayerController(GetWorld(), 0);
     pc->SetInputMode(inputMode);
     pc->SetShowMouseCursor(true);
+}
+
+void ATantrumGameModeBase::ReceivePlayer(APlayerController* controller) {
+    _attemptStartGame();
 }
 
 void ATantrumGameModeBase::BeginPlay() {
@@ -35,9 +42,24 @@ void ATantrumGameModeBase::_displayCountdown() {
         return;
     }
 
-    _gameWidget = CreateWidget<UTantrumGameWidget>(UGameplayStatics::GetPlayerController(GetWorld(), 0), _gameWidgetClass, TEXT("Game Widget"));
-    _gameWidget->AddToViewport();
-    _gameWidget->StartCountdown(_gameCountdownDuration, this);
+    for (auto iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator) {
+        auto playerController = iterator->Get();
+        if (IsValid(playerController) && playerController->PlayerState && !MustSpectate(playerController)) {
+            if (auto gameWidget = CreateWidget<UTantrumGameWidget>(playerController, _gameWidgetClass)) {
+                gameWidget->AddToPlayerScreen();
+                gameWidget->StartCountdown(_gameCountdownDuration, this);
+                _gameWidgets.Emplace(playerController, gameWidget);
+            }
+        }
+    }
+}
+
+void ATantrumGameModeBase::_attemptStartGame() {
+    if (GetNumPlayers() == _numExpectedPlayers) {
+        _displayCountdown();
+        FTimerHandle timerHandle;
+        GetWorld()->GetTimerManager().SetTimer(timerHandle, this, &ATantrumGameModeBase::_startGame, _gameCountdownDuration, false);
+    }
 }
 
 void ATantrumGameModeBase::_startGame() {

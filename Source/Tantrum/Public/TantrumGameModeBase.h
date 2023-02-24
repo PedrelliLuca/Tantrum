@@ -28,7 +28,9 @@ public:
 	UFUNCTION(BlueprintPure)
 	EGameState GetCurrentGameState() const;
 
-	void PlayerReachedEnd();
+	void PlayerReachedEnd(APlayerController* controller);
+
+	void ReceivePlayer(APlayerController* controller);
 
 protected:
 	void BeginPlay() override;
@@ -38,13 +40,17 @@ protected:
 
 private:
 	void _displayCountdown();
+	void _attemptStartGame();
 	void _startGame();
-	
+
+	UPROPERTY(EditAnywhere)
+	int32 _numExpectedPlayers = 1;
+
 	UPROPERTY(EditAnywhere)
 	float _gameCountdownDuration = 2.0f;
 
 	UPROPERTY()
-	TObjectPtr<UTantrumGameWidget> _gameWidget = nullptr;
+	TMap<APlayerController*, UTantrumGameWidget*> _gameWidgets;
 
 	UPROPERTY(EditAnywhere, Category = "Widget")
 	TSubclassOf<UTantrumGameWidget> _gameWidgetClass = nullptr;

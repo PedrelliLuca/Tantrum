@@ -50,6 +50,8 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	float _flickThreshold = 0.75f;
 
+	void ReceivedPlayer() override;
+
 private:
 	void _jump();
 	void _stopJumping();

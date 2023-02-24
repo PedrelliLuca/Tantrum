@@ -18,6 +18,6 @@ void ATantrumLevelEndTrigger::BeginPlay() {
 void ATantrumLevelEndTrigger::_communicateGameEnd(AActor* overlappedActor, AActor* otherActor) {
 	if (const auto tantrumCharacter = Cast<ATantrumCharacterBase>(otherActor)) {
 		check(_gameMode.IsValid());
-		_gameMode->PlayerReachedEnd();
+		_gameMode->PlayerReachedEnd(Cast<APlayerController>(tantrumCharacter->GetController()));
 	}
 }

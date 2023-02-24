@@ -25,9 +25,6 @@ void ATantrumPlayerController::BeginPlay() {
 		// The 0 priority will make the _defaultMappingContext easily overridable by other contexts
 		subsystem->AddMappingContext(_defaultMappingContext, 0);
 	}
-
-	_gameMode = Cast<ATantrumGameModeBase>(GetWorld()->GetAuthGameMode());
-	check(_gameMode.IsValid());
 }
 
 void ATantrumPlayerController::SetupInputComponent() {
@@ -62,6 +59,14 @@ void ATantrumPlayerController::SetupInputComponent() {
 
 	check(IsValid(_throwAction));
 	enhancedInputComponent->BindAction(_throwAction, ETriggerEvent::Triggered, this, &ATantrumPlayerController::_throw);
+}
+
+void ATantrumPlayerController::ReceivedPlayer() {
+	Super::ReceivedPlayer();
+
+	_gameMode = Cast<ATantrumGameModeBase>(GetWorld()->GetAuthGameMode());
+	check(_gameMode.IsValid());
+	_gameMode->ReceivePlayer(this);
 }
 
 void ATantrumPlayerController::_jump() {
