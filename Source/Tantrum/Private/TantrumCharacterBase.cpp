@@ -7,6 +7,7 @@
 #include "DrawDebugHelpers.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Net/UnrealNetwork.h"
 
 constexpr int CVSphereCastPlayerView = 0;
 constexpr int CVSphereCastActorTransform = 1;
@@ -37,6 +38,8 @@ static TAutoConsoleVariable<bool> CVarDisplayThrowVelocity(
 
 ATantrumCharacterBase::ATantrumCharacterBase() {
 	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true; // Replicating the player
+	SetReplicateMovement(true); // Character movement replication
 
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 		
@@ -66,6 +69,16 @@ ATantrumCharacterBase::ATantrumCharacterBase() {
 	_followCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	_followCamera->SetupAttachment(_cameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	_followCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+}
+
+void ATantrumCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const {
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	FDoRepLifetimeParams sharedParams;
+	sharedParams.bIsPushBased = true;
+	sharedParams.Condition = COND_SkipOwner; // The machine that sent the replication request sets the new value locally, so there is no point in having the server sending it back.
+
+	DOREPLIFETIME_WITH_PARAMS_FAST(ATantrumCharacterBase, _characterThrowState, sharedParams);
 }
 
 void ATantrumCharacterBase::Landed(const FHitResult& hit) {
@@ -138,15 +151,45 @@ void ATantrumCharacterBase::RequestThrow() {
 		return;
 	}
 
+	// To give a responsive feel on the local machine, play locally on the owned actor.
 	if (_playThrowMontage()) {
 		_characterThrowState = ECharacterThrowState::Throwing;
+		// Client telling the server "hey, I'm playing this animation, could you please tell replicas on other machines?"
+		_serverRequestThrowObject();
 	} else {
 		_resetThrowableObject();
 	}
 }
 
+void ATantrumCharacterBase::_serverRequestThrowObject_Implementation() {
+	// Server receives the request from one of the clients' "RequestThrow()" function
+	// Servers says "Alright, I'll send this to anybody including both the sender and myself.
+	_multicastRequestThrowObject();
+}
+
+void ATantrumCharacterBase::_multicastRequestThrowObject_Implementation() {
+	// The original sender has already played the montage in "RequestThrow()", we don't want they to play it again.
+	if (IsLocallyControlled()) {
+		return;
+	}
+
+	_playThrowMontage();
+	// This doesn't have to be here, we're already replicating the property, see header.
+	_characterThrowState = ECharacterThrowState::Throwing;
+}
+
 void ATantrumCharacterBase::Tick(const float deltaSeconds) {
 	Super::Tick(deltaSeconds);
+
+	/* The replica does not need to concern itself with trying to throw an object and doing raycasts for objects. 
+	 * Consider you have a 4 player game, and let's consider player #2 for example.
+	 * The character of player 2 is replicated 3 times on machines 1, 3, and 4. However, only the character on machine #2 will be able, through the player controller, to pull and throw objects,
+	 * because the actual player #2, on their machine, will do so. The characters on machines 1, 3 and 4, being replicas, do not need to execute the logic for pulling and throwing, they just need
+	 * to show players #1, #3, and #4 that player #2, on their machine, is doing so.
+	 */
+	if (!IsLocallyControlled()) {
+		return;
+	}
 
 	_updateStun(deltaSeconds);
 	if (_isStunned()) {
@@ -191,6 +234,13 @@ void ATantrumCharacterBase::Tick(const float deltaSeconds) {
 		default:
 			_sphereCastPlayerView();
 		}
+	}
+}
+
+void ATantrumCharacterBase::OnRep_CharacterThrowState(const ECharacterThrowState& oldCharacterThrowState) {
+	if (_characterThrowState != oldCharacterThrowState) {
+		UE_LOG(LogTemp, Warning, TEXT("%s(): OldThrowState: %s"), *FString{__FUNCTION__}, *UEnum::GetDisplayValueAsText(oldCharacterThrowState).ToString());
+		UE_LOG(LogTemp, Warning, TEXT("%s(): CharacterThrowState: %s"), *FString{__FUNCTION__}, *UEnum::GetDisplayValueAsText(_characterThrowState).ToString());
 	}
 }
 
@@ -246,6 +296,7 @@ bool ATantrumCharacterBase::_playThrowMontage() {
 	const float playRate = 1.0f;
 	const bool bPlayedSuccessfully = PlayAnimMontage(_throwMontage, playRate) > 0.0f;
 	
+	// We don't want replicas to bind to these delegates
 	if (bPlayedSuccessfully) {
 		const auto animInstance = GetMesh()->GetAnimInstance();
 
@@ -272,7 +323,10 @@ bool ATantrumCharacterBase::_playThrowMontage() {
 void ATantrumCharacterBase::_sphereCastPlayerView() {
 	FVector location;
 	FRotator rotation;
-	GetController()->GetPlayerViewPoint(location, rotation);
+
+	const auto controller = GetController();
+	check(IsValid(controller)); // This should always be valid since we're getting here only on the server.
+	controller->GetPlayerViewPoint(location, rotation);
 
 	const auto playerViewForward = rotation.Vector();
 	const auto additionalDistance = (location - GetActorLocation()).Size(); // player to camera distance

@@ -29,6 +29,9 @@ class TANTRUM_API ATantrumCharacterBase : public ACharacter, public IInteractInt
 public:
 	ATantrumCharacterBase();
 
+	// Tells the server which attributes need to be replicated on the replicas.
+	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& outLifetimeProps) const override;
+
 	void Landed(const FHitResult& hit) override;
 
 	void RequestSprint();
@@ -68,6 +71,16 @@ private:
 	bool _isStunned() const { return _stunTime > 0.0f; }
 
 	bool _playThrowMontage();
+
+	// RPC for playing the anim montage when throwing objects
+	UFUNCTION(Server, Reliable)
+	void _serverRequestThrowObject();
+	UFUNCTION(NetMulticast, Reliable)
+	void _multicastRequestThrowObject();
+
+	UFUNCTION()
+	void OnRep_CharacterThrowState(const ECharacterThrowState& oldCharacterThrowState);
+
 
 	void _sphereCastPlayerView();
 	void _sphereCastActorTransform();
@@ -111,7 +124,10 @@ private:
 	float _stunDuration = 0.f;
 	float _stunTime = -1.f;
 
-	UPROPERTY(VisibleAnywhere, Category = "Throw")
+	/* Replicated using an OnRep function, which means "when this value changes, call the OnRep_CharacterThrowState function". Where is this function called?
+	 * OnRep_XXX() IS ONLY CALLED ON THE SERVER, only the server replica will know this. The client cannot communicate this value to the replicas on other clients directly. 
+	 * To tell the server to replicate the change on the replicas, you need to override GetLifetimeReplicatedProps(), which is what we're doing for this class. */
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_CharacterThrowState, Category = "Throw")
 	ECharacterThrowState _characterThrowState = ECharacterThrowState::None;
 
 	TWeakObjectPtr<AThrowable> _throwable = nullptr;

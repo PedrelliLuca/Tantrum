@@ -30,6 +30,8 @@ void ATantrumPlayerController::BeginPlay() {
 void ATantrumPlayerController::SetupInputComponent() {
 	Super::SetupInputComponent();
 
+	// These bindings will be set up only in the locally controlled player
+
 	// Set up bindings to input actions. This won't have any effect unless a mapping context has been added to the local
 	// player subsystem
 	const auto enhancedInputComponent = CastChecked<UEnhancedInputComponent>(InputComponent);
@@ -64,9 +66,11 @@ void ATantrumPlayerController::SetupInputComponent() {
 void ATantrumPlayerController::ReceivedPlayer() {
 	Super::ReceivedPlayer();
 
+	// WARNING: THIS ONLY WORKS ON THE AUTHORITY, will return nullptr if called on the clients.
 	_gameMode = Cast<ATantrumGameModeBase>(GetWorld()->GetAuthGameMode());
-	check(_gameMode.IsValid());
-	_gameMode->ReceivePlayer(this);
+	if (_gameMode.IsValid()) {
+		_gameMode->ReceivePlayer(this);
+	}
 }
 
 void ATantrumPlayerController::_jump() {

@@ -9,6 +9,8 @@
 
 AThrowable::AThrowable() {
 	PrimaryActorTick.bCanEverTick = false;
+	bReplicates = true; // Replicating the throwable
+	SetReplicateMovement(true); // Actor movement replication
 
 	_staticMeshC = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh"));
 	SetRootComponent(_staticMeshC);
