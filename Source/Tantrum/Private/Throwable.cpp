@@ -70,6 +70,8 @@ void AThrowable::Throw(const FVector& throwDirection) {
 void AThrowable::NotifyHit(UPrimitiveComponent* myComp, AActor* other, UPrimitiveComponent* otherComp, bool bSelfMoved, FVector hitLocation, FVector hitNormal, FVector normalImpulse, const FHitResult& hit) {
 	Super::NotifyHit(myComp, other, otherComp, bSelfMoved, hitLocation, hitNormal, normalImpulse, hit);
 
+	// NOTE: THIS ONLY HAPPENS ON THE SERVER SIDE
+
 	if (_state == EThrowState::Idle || _state == EThrowState::Attached /*|| _state == EThrowState::Dropped*/) {
 		return;
 	}
@@ -94,7 +96,7 @@ void AThrowable::NotifyHit(UPrimitiveComponent* myComp, AActor* other, UPrimitiv
 			SetOwner(_pullCharacter.Get());
 			_projectileMovementC->Deactivate();
 			_state = EThrowState::Attached;
-			_onThrowableCatched.Broadcast();
+			_onThrowableCatched.Broadcast(this);
 		} else {
 			_onThrowableMissed.Broadcast();
 			_state = EThrowState::Dropped;

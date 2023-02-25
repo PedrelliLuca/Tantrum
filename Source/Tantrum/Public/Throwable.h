@@ -11,7 +11,7 @@
 
 #include "Throwable.generated.h"
 
-DECLARE_MULTICAST_DELEGATE(FOnThrowableCatched);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnThrowableCatched, AThrowable*);
 DECLARE_MULTICAST_DELEGATE(FOnThrowableMissed);
 
 

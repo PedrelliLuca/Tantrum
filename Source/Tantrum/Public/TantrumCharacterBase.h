@@ -72,11 +72,28 @@ private:
 
 	bool _playThrowMontage();
 
+	UFUNCTION(Server, Reliable)
+	void _serverPullObject(AThrowable* throwable);
+	// The reason we don't have a _multicastRequestPullObject() is that we move to the Interact state of the "Actions" anim FSM based on the "Is Interacting" boolean,
+	// whose value is set based on IsPullingObject(). This latter uses the _characterThrowState, which is already replicated.
+	UFUNCTION(Server, Reliable)
+	void _serverRequestPullObject(bool bIsPulling);
+
 	// RPC for playing the anim montage when throwing objects
 	UFUNCTION(Server, Reliable)
 	void _serverRequestThrowObject();
 	UFUNCTION(NetMulticast, Reliable)
 	void _multicastRequestThrowObject();
+
+	// Client-only function
+	UFUNCTION(Client, Reliable)
+	void _clientThrowableAttached(AThrowable* throwable);
+
+	UFUNCTION(Server, Reliable)
+	void _serverBeginThrow();
+
+	UFUNCTION(Server, Reliable)
+	void _serverFinishThrow();
 
 	UFUNCTION()
 	void OnRep_CharacterThrowState(const ECharacterThrowState& oldCharacterThrowState);
@@ -95,7 +112,7 @@ private:
 	void _setThrowable(TWeakObjectPtr<AThrowable> newThrowable);
 
 	void _resetThrowableObject();
-	void _onThrowableAttached();
+	void _onThrowableAttached(AThrowable* throwable);
 
 	UFUNCTION()
 	void _onNotifyBeginReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload);

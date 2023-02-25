@@ -125,6 +125,7 @@ bool ATantrumCharacterBase::IsPullingObject() const {
 void ATantrumCharacterBase::RequestPull() {
 	if (!_isStunned() && _characterThrowState == ECharacterThrowState::None) {
 		_characterThrowState = ECharacterThrowState::RequestingPull;
+		_serverRequestPullObject(true);
 	}
 }
 
@@ -132,6 +133,7 @@ void ATantrumCharacterBase::RequestPullCancelation() {
 	// This makes the animation of the pull stop via IsPullingObject()
 	if (_characterThrowState == ECharacterThrowState::RequestingPull) {
 		_characterThrowState = ECharacterThrowState::None;
+		_serverRequestPullObject(false);
 	}
 }
 
@@ -161,6 +163,14 @@ void ATantrumCharacterBase::RequestThrow() {
 	}
 }
 
+void ATantrumCharacterBase::_serverPullObject_Implementation(AThrowable* throwable) {
+	if (IsValid(throwable) && throwable->Pull(this)) {
+		_characterThrowState = ECharacterThrowState::Pulling;
+		_throwable = throwable;
+		_throwable->ToggleHighlight(false);
+	}
+}
+
 void ATantrumCharacterBase::_serverRequestThrowObject_Implementation() {
 	// Server receives the request from one of the clients' "RequestThrow()" function
 	// Servers says "Alright, I'll send this to anybody including both the sender and myself.
@@ -176,6 +186,12 @@ void ATantrumCharacterBase::_multicastRequestThrowObject_Implementation() {
 	_playThrowMontage();
 	// This doesn't have to be here, we're already replicating the property, see header.
 	_characterThrowState = ECharacterThrowState::Throwing;
+}
+
+void ATantrumCharacterBase::_clientThrowableAttached_Implementation(AThrowable* throwable) {
+	_characterThrowState = ECharacterThrowState::Attached;
+	_throwable = throwable;
+	MoveIgnoreActorAdd(_throwable.Get());
 }
 
 void ATantrumCharacterBase::Tick(const float deltaSeconds) {
@@ -320,12 +336,16 @@ bool ATantrumCharacterBase::_playThrowMontage() {
 	return bPlayedSuccessfully;
 }
 
+void ATantrumCharacterBase::_serverRequestPullObject_Implementation(bool bIsPulling) {
+	_characterThrowState = bIsPulling ? ECharacterThrowState::RequestingPull : ECharacterThrowState::None;
+}
+
 void ATantrumCharacterBase::_sphereCastPlayerView() {
 	FVector location;
 	FRotator rotation;
 
 	const auto controller = GetController();
-	check(IsValid(controller)); // This should always be valid since we're getting here only on the server.
+	check(IsValid(controller)); // This should always be valid since we're getting here only if locally controlled.
 	controller->GetPlayerViewPoint(location, rotation);
 
 	const auto playerViewForward = rotation.Vector();
@@ -420,9 +440,7 @@ void ATantrumCharacterBase::_processTraceResult(const FHitResult& hitResult) {
 			return;
 		}
 
-		if (_throwable.IsValid() && _throwable->Pull(this)) {
-			_characterThrowState = ECharacterThrowState::Pulling;
-		}
+		_serverPullObject(_throwable.Get());
 	}
 }
 
@@ -430,17 +448,13 @@ void ATantrumCharacterBase::_onMontageBlendingOut(UAnimMontage* montage, bool bI
 }
 
 void ATantrumCharacterBase::_onMontageEnded(UAnimMontage* montage, bool bInterrupted) {
-	_unbindMontage();
-	_characterThrowState = ECharacterThrowState::None;
-	MoveIgnoreActorRemove(_throwable.Get());
-
-	if (_throwable->GetRootComponent()) {
-		if (const auto throwableRoot = Cast<UPrimitiveComponent>(_throwable->GetRootComponent())) {
-			throwableRoot->IgnoreActorWhenMoving(this, false);
-		}
+	if (IsLocallyControlled()) {
+		_unbindMontage();
 	}
+	_characterThrowState = ECharacterThrowState::None;
 
-	_resetThrowableObject();
+	_serverFinishThrow();
+	_throwable = nullptr;
 }
 
 void ATantrumCharacterBase::_unbindMontage() {
@@ -469,10 +483,15 @@ void ATantrumCharacterBase::_resetThrowableObject() {
 	_throwable = nullptr;
 }
 
-void ATantrumCharacterBase::_onThrowableAttached() {
-	check(_throwable.IsValid());
+void ATantrumCharacterBase::_onThrowableAttached(AThrowable* throwable) {
 	_characterThrowState = ECharacterThrowState::Attached;
+	_throwable = throwable;
 	MoveIgnoreActorAdd(_throwable.Get());
+
+	// _onThrowableAttached() gets executed on the server. So we need to tell the client that actually owns this character to execute the logic through this function.
+	// This is not a broadcast, because we're telling this to just one of the clients.
+	// For example, the _throwable attribute isn't replicated, so we need to tell the client to update it.
+	_clientThrowableAttached(throwable);
 }
 
 void ATantrumCharacterBase::_onNotifyBeginReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload) {
@@ -480,6 +499,12 @@ void ATantrumCharacterBase::_onNotifyBeginReceived(FName notifyName, const FBran
 		return;
 	}
 
+	// The call to AThrowable::Throw() must be performed on the server, it has the ownership of the throwables, on the clients they are just replicas.
+	_serverBeginThrow();
+	
+}
+
+void ATantrumCharacterBase::_serverBeginThrow_Implementation() {
 	if (_throwable->GetRootComponent()) {
 		if (const auto throwableRoot = Cast<UPrimitiveComponent>(_throwable->GetRootComponent())) {
 			throwableRoot->IgnoreActorWhenMoving(this, true);
@@ -493,6 +518,18 @@ void ATantrumCharacterBase::_onNotifyBeginReceived(FName notifyName, const FBran
 		const auto start = GetMesh()->GetSocketLocation(TEXT("ObjectAttach"));
 		DrawDebugLine(GetWorld(), start, start + throwDirection, FColor::Red, false, 5.0f);
 	}
+}
+
+void ATantrumCharacterBase::_serverFinishThrow_Implementation() {
+	MoveIgnoreActorRemove(_throwable.Get());
+
+	if (_throwable->GetRootComponent()) {
+		if (const auto throwableRoot = Cast<UPrimitiveComponent>(_throwable->GetRootComponent())) {
+			throwableRoot->IgnoreActorWhenMoving(this, false);
+		}
+	}
+
+	_resetThrowableObject();
 }
 
 void ATantrumCharacterBase::_onNotifyEndReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload) {
