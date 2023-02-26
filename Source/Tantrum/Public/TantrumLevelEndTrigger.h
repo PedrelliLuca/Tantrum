@@ -18,8 +18,6 @@ public:
 	ATantrumLevelEndTrigger();
 
 private:
-	TWeakObjectPtr<ATantrumGameModeBase> _gameMode = nullptr;
-
 	UFUNCTION()
 	void _communicateGameEnd(AActor* overlappedActor, AActor* otherActor);
 };

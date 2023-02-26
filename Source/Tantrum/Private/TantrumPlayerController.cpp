@@ -8,6 +8,9 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TantrumCharacterBase.h"
+#include "TantrumGameInstance.h"
+#include "TantrumGameModeBase.h"
+#include "TantrumPlayerState.h"
 
 static TAutoConsoleVariable<bool> CVarDisplayLaunchInputDelta(
 	TEXT("Tantrum.Character.Debug.DisplayLaunchInputDelta"),
@@ -17,10 +20,18 @@ static TAutoConsoleVariable<bool> CVarDisplayLaunchInputDelta(
 );
 
 
-void ATantrumPlayerController::ClientDisplayCountdown_Implementation(float gameCountdownDuration) {
+void ATantrumPlayerController::ClientDisplayCountdown_Implementation(const float gameCountdownDuration) {
+	if (const auto tantrumGameInstance = GetWorld()->GetGameInstance<UTantrumGameInstance>()) {
+		tantrumGameInstance->DisplayCountdown(gameCountdownDuration, this);
+	}
 }
 
 void ATantrumPlayerController::ClientRestartGame_Implementation() {
+	if (const auto tantrumnPlayerState = GetPlayerState<ATantrumPlayerState>()) {
+		if (const auto tantrumGameInstance = GetWorld()->GetGameInstance<UTantrumGameInstance>()) {
+			tantrumGameInstance->RestartGame(this);
+		}
+	}
 }
 
 void ATantrumPlayerController::ClientReachedEnd_Implementation() {
@@ -30,12 +41,20 @@ void ATantrumPlayerController::ClientReachedEnd_Implementation() {
 		tantrumCharacter->GetCharacterMovement()->DisableMovement();
 	}
 
+	if (const auto tantrumGameIstance = GetWorld()->GetGameInstance<UTantrumGameInstance>()) {
+		// call the level complete event for the widget...
+	}
+
 	FInputModeUIOnly inputMode;
 	SetInputMode(inputMode);
 	SetShowMouseCursor(true);
 }
 
 void ATantrumPlayerController::ServerRestartLevel_Implementation() {
+	const auto tantrumGameMode = GetWorld()->GetAuthGameMode<ATantrumGameModeBase>();
+	if (ensureMsgf(tantrumGameMode, TEXT("ATantrumnPlayerController::ServerRestartLevel_Implementation Invalid GameMode"))) {
+		tantrumGameMode->RestartGame();
+	}
 }
 
 void ATantrumPlayerController::BeginPlay() {
@@ -46,6 +65,8 @@ void ATantrumPlayerController::BeginPlay() {
 		// The 0 priority will make the _defaultMappingContext easily overridable by other contexts
 		subsystem->AddMappingContext(_defaultMappingContext, 0);
 	}
+
+	_tantrumGameState = GetWorld()->GetGameState<ATantrumGameStateBase>();
 }
 
 void ATantrumPlayerController::SetupInputComponent() {
@@ -87,14 +108,31 @@ void ATantrumPlayerController::SetupInputComponent() {
 void ATantrumPlayerController::ReceivedPlayer() {
 	Super::ReceivedPlayer();
 
-	// WARNING: THIS ONLY WORKS ON THE AUTHORITY, will return nullptr if called on the clients.
-	_gameMode = Cast<ATantrumGameModeBase>(GetWorld()->GetAuthGameMode());
-	if (_gameMode.IsValid()) {
-		_gameMode->ReceivePlayer(this);
+	if (IsLocalController()) {
+		if (_hudClass) {
+			_hudWidget = CreateWidget(this, _hudClass);
+			if (IsValid(_hudWidget)) {
+				_hudWidget->AddToPlayerScreen();
+			}
+		}
 	}
 }
 
+bool ATantrumPlayerController::_canProcessRequest() const {
+	if (_tantrumGameState.IsValid() && _tantrumGameState->IsPlaying()) {
+		if (const auto tantrumPlayerState = GetPlayerState<ATantrumPlayerState>()) {
+			return tantrumPlayerState->GetCurrentState() == EPlayerGameState::Playing;
+		}
+	}
+
+	return false;
+}
+
 void ATantrumPlayerController::_jump() {
+	if (!_canProcessRequest()) {
+		return;
+	}
+
 	if (const auto character = GetCharacter(); IsValid(character)) {
 		character->Jump();
 	}
@@ -109,8 +147,7 @@ void ATantrumPlayerController::_stopJumping() {
 }
 
 void ATantrumPlayerController::_move(const FInputActionValue& value) {
-	check(_gameMode.IsValid());
-	if (_gameMode->GetCurrentGameState() != EGameState::Playing) {
+	if (!_canProcessRequest()) {
 		return;
 	}
 
@@ -128,8 +165,6 @@ void ATantrumPlayerController::_move(const FInputActionValue& value) {
 		pawn->AddMovementInput(forwardDir, movementVector.Y);
 		pawn->AddMovementInput(rightDir, movementVector.X);
 	}
-
-	
 }
 
 void ATantrumPlayerController::_look(const FInputActionValue& value) {
@@ -145,8 +180,7 @@ void ATantrumPlayerController::_look(const FInputActionValue& value) {
 }
 
 void ATantrumPlayerController::_sprintTriggered() {
-	check(_gameMode.IsValid());
-	if (_gameMode->GetCurrentGameState() != EGameState::Playing) {
+	if (!_canProcessRequest()) {
 		return;
 	}
 
@@ -162,8 +196,7 @@ void ATantrumPlayerController::_sprintCanceled() {
 }
 
 void ATantrumPlayerController::_crouchTriggered() {
-	check(_gameMode.IsValid());
-	if (_gameMode->GetCurrentGameState() != EGameState::Playing) {
+	if (!_canProcessRequest()) {
 		return;
 	}
 
@@ -185,8 +218,7 @@ void ATantrumPlayerController::_crouchCanceled() {
 }
 
 void ATantrumPlayerController::_pullTriggered() {
-	check(_gameMode.IsValid());
-	if (_gameMode->GetCurrentGameState() != EGameState::Playing) {
+	if (!_canProcessRequest()) {
 		return;
 	}
 
@@ -202,8 +234,7 @@ void ATantrumPlayerController::_pullCanceled() {
 }
 
 void ATantrumPlayerController::_throw(const FInputActionValue& value) {
-	check(_gameMode.IsValid());
-	if (_gameMode->GetCurrentGameState() != EGameState::Playing) {
+	if (!_canProcessRequest()) {
 		return;
 	}
 

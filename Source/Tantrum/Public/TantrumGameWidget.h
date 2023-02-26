@@ -3,7 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+
 #include "Blueprint/UserWidget.h"
+#include "TantrumPlayerController.h"
 
 #include "TantrumGameWidget.generated.h"
 
@@ -16,8 +18,14 @@ class TANTRUM_API UTantrumGameWidget : public UUserWidget {
 
 public:
 	UFUNCTION(BlueprintImplementableEvent)
-	void StartCountdown(float countdownTime, class ATantrumGameModeBase* gameMode);
+	void StartCountdown(float CountdownTime, ATantrumPlayerController* TantrumnPlayerController);
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void LevelComplete();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void DisplayResults();
+
+	UFUNCTION(BlueprintImplementableEvent)
+	void RemoveResults();
 };

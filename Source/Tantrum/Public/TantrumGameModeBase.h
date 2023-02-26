@@ -8,15 +8,6 @@
 
 #include "TantrumGameModeBase.generated.h"
 
-UENUM(BlueprintType)
-enum class EGameState : uint8 {
-	None     UMETA(DisplayName = "None"),
-	Waiting  UMETA(DisplayName = "Waiting"),
-	Playing  UMETA(DisplayName = "Playing"),
-	Paused   UMETA(DisplayName = "Paused"),
-	GameOver UMETA(DisplayName = "Game Over")
-};
-
 /**
  * 
  */
@@ -25,34 +16,25 @@ class TANTRUM_API ATantrumGameModeBase : public AGameModeBase {
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintPure)
-	EGameState GetCurrentGameState() const;
+	ATantrumGameModeBase();
 
-	void PlayerReachedEnd(APlayerController* controller);
-
-	void ReceivePlayer(APlayerController* controller);
+	void RestartGame();
 
 protected:
 	void BeginPlay() override;
-
-	UPROPERTY(VisibleAnywhere)
-	EGameState _gameState = EGameState::None;
+	void RestartPlayer(AController* newPlayer) override;
 
 private:
-	void _displayCountdown();
 	void _attemptStartGame();
+	void _displayCountdown();
 	void _startGame();
 
-	UPROPERTY(EditAnywhere)
-	int32 _numExpectedPlayers = 1;
+	UFUNCTION(BlueprintCallable, Category = "Game Details")
+	void _setNumExpectedPlayers(const uint8 numExpectedPlayers) { _numExpectedPlayers = numExpectedPlayers; }
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "Game Details")
+	uint8 _numExpectedPlayers = 1u;
+
+	UPROPERTY(EditAnywhere, Category = "Game Details")
 	float _gameCountdownDuration = 2.0f;
-
-	UPROPERTY()
-	TMap<APlayerController*, UTantrumGameWidget*> _gameWidgets;
-
-	UPROPERTY(EditAnywhere, Category = "Widget")
-	TSubclassOf<UTantrumGameWidget> _gameWidgetClass = nullptr;
-
 };

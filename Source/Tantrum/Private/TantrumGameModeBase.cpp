@@ -1,74 +1,111 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 
-#include "Kismet/GameplayStatics.h"
 #include "TantrumGameModeBase.h"
 
-EGameState ATantrumGameModeBase::GetCurrentGameState() const {
-    return _gameState;
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "TantrumGameStateBase.h"
+#include "TantrumPlayerController.h"
+#include "TantrumPlayerState.h"
+
+ATantrumGameModeBase::ATantrumGameModeBase() {
+    PrimaryActorTick.bCanEverTick = false;
 }
 
-void ATantrumGameModeBase::PlayerReachedEnd(APlayerController* controller) {
-    _gameState = EGameState::GameOver;
+void ATantrumGameModeBase::RestartGame() {
+    ResetLevel();
 
-    const auto gameWidget = _gameWidgets.Find(controller);
-    check(gameWidget != nullptr);
+	for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator) {
+		const auto playerController = iterator->Get();
 
-    (*gameWidget)->LevelComplete();
-    FInputModeUIOnly inputMode;
-
-    const auto pc = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-    pc->SetInputMode(inputMode);
-    pc->SetShowMouseCursor(true);
+		if (playerController && playerController->PlayerState && !MustSpectate(playerController)) {
+			//call something to clean up the hud 
+			if (const auto tantrumnPlayerController = Cast<ATantrumPlayerController>(playerController)) {
+				tantrumnPlayerController->ClientRestartGame();
+			}
+			RestartPlayer(playerController);
+		}
+	}
 }
 
-void ATantrumGameModeBase::ReceivePlayer(APlayerController* controller) {
-    _attemptStartGame();
+void ATantrumGameModeBase::RestartPlayer(AController* newPlayer) {
+    Super::RestartPlayer(newPlayer);
+
+	if (const auto playerController = Cast<APlayerController>(newPlayer)) {
+		if (playerController->GetCharacter() && playerController->GetCharacter()->GetCharacterMovement()) {
+			playerController->GetCharacter()->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+
+			const auto playerState = playerController->GetPlayerState<ATantrumPlayerState>();
+			if (playerState) {
+				playerState->SetCurrentState(EPlayerGameState::Waiting);
+			}
+		}
+	}
+
+	_attemptStartGame();
 }
 
 void ATantrumGameModeBase::BeginPlay() {
     Super::BeginPlay();
 
-    _gameState = EGameState::Waiting;
-    _displayCountdown();
+    if (const auto tantrumGameState = GetGameState<ATantrumGameStateBase>()) {
+        tantrumGameState->SetGameState(EGameState::Waiting);
+    }
+}
 
-    FTimerHandle handle{};
-    GetWorld()->GetTimerManager().SetTimer(handle, this, &ATantrumGameModeBase::_startGame, _gameCountdownDuration, false);
+
+void ATantrumGameModeBase::_attemptStartGame() {
+    if (const auto tantrumGameState = GetGameState<ATantrumGameStateBase>()) {
+        tantrumGameState->SetGameState(EGameState::Waiting);
+    }
+
+    if (GetNumPlayers() == _numExpectedPlayers) {
+        // This needs to be replicated, call a function on game instance and replicate
+        _displayCountdown();
+        if (_gameCountdownDuration > SMALL_NUMBER) {
+            FTimerHandle timerHandle;
+            GetWorld()->GetTimerManager().SetTimer(timerHandle, this, &ATantrumGameModeBase::_startGame, _gameCountdownDuration, false);
+        } else {
+            _startGame();
+        }
+
+    }
 }
 
 void ATantrumGameModeBase::_displayCountdown() {
-    if (!IsValid(_gameWidgetClass)) {
-        UE_LOG(LogTemp, Error, TEXT("%s: missing game widget class!!"), *FString{__FUNCTION__});
-        return;
-    }
-
     for (auto iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator) {
         auto playerController = iterator->Get();
         if (IsValid(playerController) && playerController->PlayerState && !MustSpectate(playerController)) {
-            if (auto gameWidget = CreateWidget<UTantrumGameWidget>(playerController, _gameWidgetClass)) {
-                gameWidget->AddToPlayerScreen();
-                gameWidget->StartCountdown(_gameCountdownDuration, this);
-                _gameWidgets.Emplace(playerController, gameWidget);
+            if (const auto tantrumPlayerController = Cast<ATantrumPlayerController>(playerController)) {
+                tantrumPlayerController->ClientDisplayCountdown(_gameCountdownDuration);
             }
         }
     }
 }
 
-void ATantrumGameModeBase::_attemptStartGame() {
-    if (GetNumPlayers() == _numExpectedPlayers) {
-        _displayCountdown();
-        FTimerHandle timerHandle;
-        GetWorld()->GetTimerManager().SetTimer(timerHandle, this, &ATantrumGameModeBase::_startGame, _gameCountdownDuration, false);
-    }
-}
-
 void ATantrumGameModeBase::_startGame() {
-    // This is needed, otherwise if you restart the level via "retry" button you'll still be in UIOnly mode.
-    FInputModeGameOnly inputMode;
-    
-    const auto pc = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-    pc->SetInputMode(inputMode);
-    pc->SetShowMouseCursor(false);
+    if (const auto tantrumGameState = GetGameState<ATantrumGameStateBase>())
+	{
+		tantrumGameState->SetGameState(EGameState::Playing);
+		tantrumGameState->ClearResults();
+	}
 
-    _gameState = EGameState::Playing;
+	for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator)
+	{
+		const auto playerController = iterator->Get();
+		if (playerController && playerController->PlayerState && !MustSpectate(playerController))
+		{
+			FInputModeGameOnly InputMode;
+			playerController->SetInputMode(InputMode);
+			playerController->SetShowMouseCursor(false);
+
+			const auto playerState = playerController->GetPlayerState<ATantrumPlayerState>();
+			if (playerState)
+			{
+				playerState->SetCurrentState(EPlayerGameState::Playing);
+				playerState->SetIsWinner(false);
+			}
+		}
+	}
 }

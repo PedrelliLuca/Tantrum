@@ -6,7 +6,7 @@
 
 #include "GameFramework/PlayerController.h"
 #include "InputMappingContext.h"
-#include "TantrumGameModeBase.h"
+#include "TantrumGameStateBase.h"
 
 #include "TantrumPlayerController.generated.h"
 
@@ -66,6 +66,8 @@ protected:
 	void ReceivedPlayer() override;
 
 private:
+	bool _canProcessRequest() const;
+
 	void _jump();
 	void _stopJumping();
 
@@ -86,5 +88,11 @@ private:
 
 	float _lastThrowAxis = 0;
 
-	TWeakObjectPtr<ATantrumGameModeBase> _gameMode = nullptr;
+	UPROPERTY(EditAnywhere, Category = "HUD")
+    TSubclassOf<UUserWidget> _hudClass = nullptr;
+
+	UPROPERTY()
+    TObjectPtr<UUserWidget> _hudWidget;
+
+    TWeakObjectPtr<ATantrumGameStateBase> _tantrumGameState;
 };
