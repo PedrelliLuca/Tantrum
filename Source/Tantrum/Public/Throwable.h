@@ -11,10 +11,6 @@
 
 #include "Throwable.generated.h"
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnThrowableCatched, AThrowable*);
-DECLARE_MULTICAST_DELEGATE(FOnThrowableMissed);
-
-
 UCLASS()
 class TANTRUM_API AThrowable : public AActor {
 	GENERATED_BODY()
@@ -37,9 +33,6 @@ public:
 	void NotifyHit(UPrimitiveComponent* myComp, AActor* other, UPrimitiveComponent* otherComp, bool bSelfMoved, FVector hitLocation, FVector hitNormal, FVector normalImpulse, const FHitResult& hit) override;
 
 	void ToggleHighlight(bool bIsOn);
-
-	FOnThrowableCatched& OnThrowableAttached() { return _onThrowableCatched; }
-	FOnThrowableMissed& OnThrowableMissed() { return _onThrowableMissed; }
 
 	EEffectType GetEffectType() const { return _effectType; }
 
@@ -75,9 +68,6 @@ private:
 	};
 
 	EThrowState _state = EThrowState::Idle;
-
-	FOnThrowableCatched _onThrowableCatched;
-	FOnThrowableMissed _onThrowableMissed;
 
 	UPROPERTY(EditAnywhere, Category="Effect")
 	EEffectType _effectType = EEffectType::None;

@@ -6,6 +6,7 @@
 #include "Components/CapsuleComponent.h"
 #include "InteractInterface.h"
 #include "Kismet/GameplayStatics.h"
+#include "TantrumCharacterBase.h"
 
 AThrowable::AThrowable() {
 	PrimaryActorTick.bCanEverTick = false;
@@ -90,16 +91,17 @@ void AThrowable::NotifyHit(UPrimitiveComponent* myComp, AActor* other, UPrimitiv
 	}
 
 	if (_state == EThrowState::Pull) {
-
-		if (other == _pullCharacter) {
-			AttachToComponent(_pullCharacter->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("ObjectAttach"));
-			SetOwner(_pullCharacter.Get());
-			_projectileMovementC->Deactivate();
-			_state = EThrowState::Attached;
-			_onThrowableCatched.Broadcast(this);
-		} else {
-			_onThrowableMissed.Broadcast();
-			_state = EThrowState::Dropped;
+		if (const auto tantrumChar = Cast<ATantrumCharacterBase>(_pullCharacter)) {
+			if (other == tantrumChar) {
+				AttachToComponent(tantrumChar->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("ObjectAttach"));
+				SetOwner(tantrumChar);
+				_projectileMovementC->Deactivate();
+				_state = EThrowState::Attached;
+				tantrumChar->OnThrowableAttached(this);
+			} else {
+				tantrumChar->ResetThrowableObject();
+				_state = EThrowState::Dropped;
+			}
 		}
 	}
 

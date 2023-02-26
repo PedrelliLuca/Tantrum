@@ -140,7 +140,7 @@ void ATantrumCharacterBase::RequestPullCancelation() {
 void ATantrumCharacterBase::RequestUseObject() {
 	ApplyEffect_Implementation(_throwable->GetEffectType(), true);
 	_throwable->Destroy();
-	_resetThrowableObject();
+	ResetThrowableObject();
 }
 
 
@@ -159,7 +159,7 @@ void ATantrumCharacterBase::RequestThrow() {
 		// Client telling the server "hey, I'm playing this animation, could you please tell replicas on other machines?"
 		_serverRequestThrowObject();
 	} else {
-		_resetThrowableObject();
+		ResetThrowableObject();
 	}
 }
 
@@ -314,23 +314,25 @@ bool ATantrumCharacterBase::_playThrowMontage() {
 	
 	// We don't want replicas to bind to these delegates
 	if (bPlayedSuccessfully) {
-		const auto animInstance = GetMesh()->GetAnimInstance();
+		if (IsLocallyControlled()) {
+			const auto animInstance = GetMesh()->GetAnimInstance();
 
-		// Setting the blending out callback on the montage
-		if (!_blendingOutDelegate.IsBound()) {
-			_blendingOutDelegate.BindUObject(this, &ATantrumCharacterBase::_onMontageBlendingOut);
+			// Setting the blending out callback on the montage
+			if (!_blendingOutDelegate.IsBound()) {
+				_blendingOutDelegate.BindUObject(this, &ATantrumCharacterBase::_onMontageBlendingOut);
+			}
+			animInstance->Montage_SetBlendingOutDelegate(_blendingOutDelegate, _throwMontage);
+
+			// Setting the end delegate callback on the montage
+			if (!_montageEndedDelegate.IsBound()) {
+				_montageEndedDelegate.BindUObject(this, &ATantrumCharacterBase::_onMontageEnded);
+			}
+			animInstance->Montage_SetEndDelegate(_montageEndedDelegate, _throwMontage);
+
+			// Set the callbacks for when the montage begins and ends on the character
+			animInstance->OnPlayMontageNotifyBegin.AddDynamic(this, &ATantrumCharacterBase::_onNotifyBeginReceived);
+			animInstance->OnPlayMontageNotifyEnd.AddDynamic(this, &ATantrumCharacterBase::_onNotifyEndReceived);
 		}
-		animInstance->Montage_SetBlendingOutDelegate(_blendingOutDelegate, _throwMontage);
-
-		// Setting the end delegate callback on the montage
-		if (!_montageEndedDelegate.IsBound()) {
-			_montageEndedDelegate.BindUObject(this, &ATantrumCharacterBase::_onMontageEnded);
-		}
-		animInstance->Montage_SetEndDelegate(_montageEndedDelegate, _throwMontage);
-
-		// Set the callbacks for when the montage begins and ends on the character
-		animInstance->OnPlayMontageNotifyBegin.AddDynamic(this, &ATantrumCharacterBase::_onNotifyBeginReceived);
-		animInstance->OnPlayMontageNotifyEnd.AddDynamic(this, &ATantrumCharacterBase::_onNotifyEndReceived);
 	}
 
 	return bPlayedSuccessfully;
@@ -426,13 +428,15 @@ void ATantrumCharacterBase::_processTraceResult(const FHitResult& hitResult) {
 		}
 	}
 
-	if (isValidTarget) {
-		if (!_throwable.IsValid()) {
-			_setThrowable(hitThrowable);
-
-			_throwable->ToggleHighlight(true);
-		}
+	if (!isValidTarget) {
+		return;
 	}
+
+	if (!isSameActor) {
+		_throwable = hitThrowable;
+		_throwable->ToggleHighlight(true);
+	}
+
 
 	if (_characterThrowState == ECharacterThrowState::RequestingPull) {
 		// You can't pull while sprinting
@@ -441,6 +445,7 @@ void ATantrumCharacterBase::_processTraceResult(const FHitResult& hitResult) {
 		}
 
 		_serverPullObject(_throwable.Get());
+		_throwable->ToggleHighlight(false);
 	}
 }
 
@@ -458,32 +463,26 @@ void ATantrumCharacterBase::_onMontageEnded(UAnimMontage* montage, bool bInterru
 }
 
 void ATantrumCharacterBase::_unbindMontage() {
+	if (!IsLocallyControlled()) {
+		return;
+	}
+
 	if (const auto animInstance = GetMesh()->GetAnimInstance()) {
 		animInstance->OnPlayMontageNotifyBegin.RemoveDynamic(this, &ATantrumCharacterBase::_onNotifyBeginReceived);
 		animInstance->OnPlayMontageNotifyEnd.RemoveDynamic(this, &ATantrumCharacterBase::_onNotifyEndReceived);
 	}
 }
 
-void ATantrumCharacterBase::_setThrowable(TWeakObjectPtr<AThrowable> newThrowable) {
-	check(newThrowable.IsValid());
-
-	_throwable = MoveTemp(newThrowable);
-	_throwable->OnThrowableAttached().AddUObject(this, &ATantrumCharacterBase::_onThrowableAttached);
-	_throwable->OnThrowableMissed().AddUObject(this, &ATantrumCharacterBase::_resetThrowableObject);
-}
-
-void ATantrumCharacterBase::_resetThrowableObject() {
+void ATantrumCharacterBase::ResetThrowableObject() {
 	_characterThrowState = ECharacterThrowState::None;
 
 	if (_throwable.IsValid()) {
 		_throwable->Drop();
-		_throwable->OnThrowableAttached().RemoveAll(this);
-		_throwable->OnThrowableMissed().RemoveAll(this);
 	}
 	_throwable = nullptr;
 }
 
-void ATantrumCharacterBase::_onThrowableAttached(AThrowable* throwable) {
+void ATantrumCharacterBase::OnThrowableAttached(AThrowable* throwable) {
 	_characterThrowState = ECharacterThrowState::Attached;
 	_throwable = throwable;
 	MoveIgnoreActorAdd(_throwable.Get());
@@ -521,6 +520,7 @@ void ATantrumCharacterBase::_serverBeginThrow_Implementation() {
 }
 
 void ATantrumCharacterBase::_serverFinishThrow_Implementation() {
+	_characterThrowState = ECharacterThrowState::None;
 	MoveIgnoreActorRemove(_throwable.Get());
 
 	if (_throwable->GetRootComponent()) {
@@ -529,7 +529,8 @@ void ATantrumCharacterBase::_serverFinishThrow_Implementation() {
 		}
 	}
 
-	_resetThrowableObject();
+	// ResetThrowableObject();
+	_throwable = nullptr;
 }
 
 void ATantrumCharacterBase::_onNotifyEndReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload) {

@@ -55,6 +55,9 @@ public:
 
 	void EndEffect();
 
+	void ResetThrowableObject();
+	void OnThrowableAttached(AThrowable* throwable);
+
 protected:
 	void BeginPlay() override;
 
@@ -108,11 +111,6 @@ private:
 	void _onMontageBlendingOut(UAnimMontage* montage, bool bInterrupted);
 	void _onMontageEnded(UAnimMontage* montage, bool bInterrupted);
 	void _unbindMontage();
-
-	void _setThrowable(TWeakObjectPtr<AThrowable> newThrowable);
-
-	void _resetThrowableObject();
-	void _onThrowableAttached(AThrowable* throwable);
 
 	UFUNCTION()
 	void _onNotifyBeginReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload);
