@@ -17,6 +17,27 @@ static TAutoConsoleVariable<bool> CVarDisplayLaunchInputDelta(
 );
 
 
+void ATantrumPlayerController::ClientDisplayCountdown_Implementation(float gameCountdownDuration) {
+}
+
+void ATantrumPlayerController::ClientRestartGame_Implementation() {
+}
+
+void ATantrumPlayerController::ClientReachedEnd_Implementation() {
+	if (const auto tantrumCharacter = Cast<ATantrumCharacterBase>(GetCharacter())) {
+		// We want each replica of the character to play the montage, other clients need to see it.
+		tantrumCharacter->ServerPlayCelebrateMontage();
+		tantrumCharacter->GetCharacterMovement()->DisableMovement();
+	}
+
+	FInputModeUIOnly inputMode;
+	SetInputMode(inputMode);
+	SetShowMouseCursor(true);
+}
+
+void ATantrumPlayerController::ServerRestartLevel_Implementation() {
+}
+
 void ATantrumPlayerController::BeginPlay() {
 	Super::BeginPlay();
 

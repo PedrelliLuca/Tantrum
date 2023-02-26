@@ -58,6 +58,9 @@ public:
 	void ResetThrowableObject();
 	void OnThrowableAttached(AThrowable* throwable);
 
+	UFUNCTION(Server, Reliable)
+	void ServerPlayCelebrateMontage();
+
 protected:
 	void BeginPlay() override;
 
@@ -74,6 +77,7 @@ private:
 	bool _isStunned() const { return _stunTime > 0.0f; }
 
 	bool _playThrowMontage();
+	bool _playCelebrateMontage();
 
 	UFUNCTION(Server, Reliable)
 	void _serverPullObject(AThrowable* throwable);
@@ -97,6 +101,9 @@ private:
 
 	UFUNCTION(Server, Reliable)
 	void _serverFinishThrow();
+
+	UFUNCTION(NetMulticast, Reliable)
+	void _multicastPlayCelebrateMontage();
 
 	UFUNCTION()
 	void OnRep_CharacterThrowState(const ECharacterThrowState& oldCharacterThrowState);
@@ -161,6 +168,9 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Animation")
 	TObjectPtr<UAnimMontage> _throwMontage = nullptr;
+
+	UPROPERTY(EditAnywhere, Category = "Animation")
+	TObjectPtr<UAnimMontage> _celebrateMontage = nullptr;
 
 	FOnMontageBlendingOutStarted _blendingOutDelegate;
 	FOnMontageEnded _montageEndedDelegate;

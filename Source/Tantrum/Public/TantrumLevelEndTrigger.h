@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "Engine/TriggerVolume.h"
-#include "TantrumGameModeBase.h"
 
 #include "TantrumLevelEndTrigger.generated.h"
 
@@ -17,9 +16,6 @@ class TANTRUM_API ATantrumLevelEndTrigger : public ATriggerVolume {
 	
 public:
 	ATantrumLevelEndTrigger();
-
-protected:
-	void BeginPlay() override;
 
 private:
 	TWeakObjectPtr<ATantrumGameModeBase> _gameMode = nullptr;

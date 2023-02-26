@@ -253,6 +253,10 @@ void ATantrumCharacterBase::Tick(const float deltaSeconds) {
 	}
 }
 
+void ATantrumCharacterBase::_multicastPlayCelebrateMontage_Implementation() {
+	_playCelebrateMontage();
+}
+
 void ATantrumCharacterBase::OnRep_CharacterThrowState(const ECharacterThrowState& oldCharacterThrowState) {
 	if (_characterThrowState != oldCharacterThrowState) {
 		UE_LOG(LogTemp, Warning, TEXT("%s(): OldThrowState: %s"), *FString{__FUNCTION__}, *UEnum::GetDisplayValueAsText(oldCharacterThrowState).ToString());
@@ -312,8 +316,8 @@ bool ATantrumCharacterBase::_playThrowMontage() {
 	const float playRate = 1.0f;
 	const bool bPlayedSuccessfully = PlayAnimMontage(_throwMontage, playRate) > 0.0f;
 	
-	// We don't want replicas to bind to these delegates
 	if (bPlayedSuccessfully) {
+		// We don't want replicas to bind to these delegates, that are for logic stuff, we only bound the callbacks if we're locally controlled.
 		if (IsLocallyControlled()) {
 			const auto animInstance = GetMesh()->GetAnimInstance();
 
@@ -333,6 +337,26 @@ bool ATantrumCharacterBase::_playThrowMontage() {
 			animInstance->OnPlayMontageNotifyBegin.AddDynamic(this, &ATantrumCharacterBase::_onNotifyBeginReceived);
 			animInstance->OnPlayMontageNotifyEnd.AddDynamic(this, &ATantrumCharacterBase::_onNotifyEndReceived);
 		}
+	}
+
+	return bPlayedSuccessfully;
+}
+
+bool ATantrumCharacterBase::_playCelebrateMontage() {
+	const float playRate = 1.0f;
+	const bool bPlayedSuccessfully = PlayAnimMontage(_celebrateMontage, playRate) > 0.0f;
+	
+	// We don't want replicas to bind to these delegates
+	if (bPlayedSuccessfully) {
+		// Differently from _playThrowMontage(), we want everyone, replicas included to bind to this delegate. 
+		// The reason is that we want the extension of the celebration (the one beyond the "Winner" point in the montage to show for each replica.
+		const auto animInstance = GetMesh()->GetAnimInstance();
+
+		// Setting the end delegate callback on the montage
+		if (!_montageEndedDelegate.IsBound()) {
+			_montageEndedDelegate.BindUObject(this, &ATantrumCharacterBase::_onMontageEnded);
+		}
+		animInstance->Montage_SetEndDelegate(_montageEndedDelegate, _celebrateMontage);
 	}
 
 	return bPlayedSuccessfully;
@@ -456,10 +480,27 @@ void ATantrumCharacterBase::_onMontageEnded(UAnimMontage* montage, bool bInterru
 	if (IsLocallyControlled()) {
 		_unbindMontage();
 	}
-	_characterThrowState = ECharacterThrowState::None;
 
-	_serverFinishThrow();
-	_throwable = nullptr;
+	if (montage == _throwMontage) {
+		if (IsLocallyControlled()) {
+			_characterThrowState = ECharacterThrowState::None;
+			_serverFinishThrow();
+			_throwable = nullptr;
+		}
+	} else if (montage == _celebrateMontage) {
+		if (IsLocallyControlled()) {
+			if (const auto tantrumGameInstance = GetWorld()->GetGameInstance<UTantrumGameInstance>()) {
+				tantrumGameInstance->DisplayLevelComplete();
+			}
+		}
+
+		if (const auto tantrumPlayerState = GetPlayerState<ATantrumPlayerState>()) {
+			if (tantrumPlayerState->IsWinner()) {
+				// Plays the 2nd part of the montage only if you won.
+				PlayAnimMontage(_celebrateMontage, 1.0f, TEXT("Winner"));
+			}
+		}
+	}
 }
 
 void ATantrumCharacterBase::_unbindMontage() {
@@ -491,6 +532,10 @@ void ATantrumCharacterBase::OnThrowableAttached(AThrowable* throwable) {
 	// This is not a broadcast, because we're telling this to just one of the clients.
 	// For example, the _throwable attribute isn't replicated, so we need to tell the client to update it.
 	_clientThrowableAttached(throwable);
+}
+
+void ATantrumCharacterBase::ServerPlayCelebrateMontage_Implementation() {
+	_multicastPlayCelebrateMontage();
 }
 
 void ATantrumCharacterBase::_onNotifyBeginReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload) {

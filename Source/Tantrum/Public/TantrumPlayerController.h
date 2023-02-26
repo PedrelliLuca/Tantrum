@@ -17,6 +17,19 @@ UCLASS()
 class TANTRUM_API ATantrumPlayerController : public APlayerController {
 	GENERATED_BODY()
 
+public:
+	UFUNCTION(Client, Reliable)
+	void ClientDisplayCountdown(float gameCountdownDuration);
+
+	UFUNCTION(Client, Reliable)
+	void ClientRestartGame();
+
+	UFUNCTION(Client, Reliable)
+	void ClientReachedEnd();
+	
+	UFUNCTION(Server, Reliable)
+	void ServerRestartLevel();
+
 protected:
 	void BeginPlay() override;
 	
