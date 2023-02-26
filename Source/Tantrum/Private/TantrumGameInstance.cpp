@@ -37,11 +37,15 @@ void UTantrumGameInstance::DisplayLevelComplete(ATantrumPlayerController* tantru
     }
 }
 
+// We get here by clicking on the "Retry" button of the widget
 void UTantrumGameInstance::OnRetrySelected(ATantrumPlayerController* tantrumPlayerController) {
     const auto maybeGameWidget = _gameWidgets.Find(tantrumPlayerController);
 	if (maybeGameWidget) {
-		RestartGame(tantrumPlayerController);
-		tantrumPlayerController->ServerRestartLevel();
+        // Simple cleanup of the UI
+		RestartGame(tantrumPlayerController); 
+        // This is the real restart, performed via GameMode (see function implementation). The GameMode can be accessed only via server,
+        // that's the machine that has authority on it, and GameMode is not replicated.
+		tantrumPlayerController->ServerRestartLevel(); 
 	}
 }
 

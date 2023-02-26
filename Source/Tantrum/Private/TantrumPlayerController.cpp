@@ -27,6 +27,7 @@ void ATantrumPlayerController::ClientDisplayCountdown_Implementation(const float
 }
 
 void ATantrumPlayerController::ClientRestartGame_Implementation() {
+	// Cleanup the UI for each client
 	if (const auto tantrumnPlayerState = GetPlayerState<ATantrumPlayerState>()) {
 		if (const auto tantrumGameInstance = GetWorld()->GetGameInstance<UTantrumGameInstance>()) {
 			tantrumGameInstance->RestartGame(this);

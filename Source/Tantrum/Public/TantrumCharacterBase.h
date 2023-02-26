@@ -40,6 +40,12 @@ public:
 	UFUNCTION(BlueprintPure)
 	bool IsPullingObject() const;
 
+	UFUNCTION(BlueprintPure)
+	bool IsThrowing() const;
+
+	UFUNCTION(BlueprintPure)
+	bool IsHovering() const;
+
 	void RequestPull();
 	void RequestPullCancelation();
 

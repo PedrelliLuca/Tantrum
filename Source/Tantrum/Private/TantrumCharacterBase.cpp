@@ -124,6 +124,19 @@ bool ATantrumCharacterBase::IsPullingObject() const {
 	return _characterThrowState == ECharacterThrowState::RequestingPull || _characterThrowState == ECharacterThrowState::Pulling;
 }
 
+bool ATantrumCharacterBase::IsThrowing() const
+{
+	return _characterThrowState == ECharacterThrowState::Throwing;
+}
+
+bool ATantrumCharacterBase::IsHovering() const {
+	if (const auto tantrumPlayerState = GetPlayerState<ATantrumPlayerState>()) {
+		return tantrumPlayerState->GetCurrentState() != EPlayerGameState::Playing;
+	}
+
+	return false;
+}
+
 void ATantrumCharacterBase::RequestPull() {
 	if (!_isStunned() && _characterThrowState == ECharacterThrowState::None) {
 		_characterThrowState = ECharacterThrowState::RequestingPull;
