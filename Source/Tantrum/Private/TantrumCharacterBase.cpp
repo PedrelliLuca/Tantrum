@@ -536,11 +536,11 @@ void ATantrumCharacterBase::_unbindMontage() {
 }
 
 void ATantrumCharacterBase::ResetThrowableObject() {
-	_characterThrowState = ECharacterThrowState::None;
 
 	if (_throwable.IsValid()) {
 		_throwable->Drop();
 	}
+	_characterThrowState = ECharacterThrowState::None;
 	_throwable = nullptr;
 }
 
@@ -595,6 +595,7 @@ void ATantrumCharacterBase::_serverFinishThrow_Implementation() {
 		}
 	}
 
+	// Uncomment this function call if you want the throwable to affect the character that threw it too
 	// ResetThrowableObject();
 	_throwable = nullptr;
 }
