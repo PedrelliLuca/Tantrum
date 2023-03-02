@@ -67,8 +67,21 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerPlayCelebrateMontage();
 
+	UFUNCTION(BlueprintPure)
+	bool IsBeingRescued() const { return _isBeingRescued; }
+
+	void FellOutOfWorld(const UDamageType& dmgType) override;
+
+	void OnMovementModeChanged(EMovementMode prevMovementMode, uint8 previousCustomMode = 0) override;
+
 protected:
 	void BeginPlay() override;
+
+	UFUNCTION()
+	void OnRep_CharacterThrowState(const ECharacterThrowState& oldCharacterThrowState);
+
+	UFUNCTION()
+	void OnRep_IsBeingRescued();
 
 	/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, Category = Camera)
@@ -84,6 +97,9 @@ private:
 
 	bool _playThrowMontage();
 	bool _playCelebrateMontage();
+
+	UFUNCTION(Server, Reliable)
+	void _serverSprintStart();
 
 	UFUNCTION(Server, Reliable)
 	void _serverPullObject(AThrowable* throwable);
@@ -111,9 +127,10 @@ private:
 	UFUNCTION(NetMulticast, Reliable)
 	void _multicastPlayCelebrateMontage();
 
-	UFUNCTION()
-	void OnRep_CharacterThrowState(const ECharacterThrowState& oldCharacterThrowState);
-
+	// These only happen on the server; the variable _isBeingRescued is replicated.
+	void _startRescue();
+	void _updateRescue(float deltaTime);
+	void _endRescue();
 
 	void _sphereCastPlayerView();
 	void _sphereCastActorTransform();
@@ -172,6 +189,9 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Throw", meta = (ClampMin = "0.0"))
 	float _throwSpeed = 2000.0f;
 
+	UPROPERTY(ReplicatedUsing = OnRep_IsBeingRescued)
+	bool _isBeingRescued = false;
+
 	UPROPERTY(EditAnywhere, Category = "Animation")
 	TObjectPtr<UAnimMontage> _throwMontage = nullptr;
 
@@ -183,6 +203,16 @@ private:
 
 	bool _bIsUnderEffect = false;
 	bool _bIsEffectBuff = false;
+
+	//handle fall out of world
+	UPROPERTY(replicated)
+	FVector _lastGroundPosition = FVector::ZeroVector; 
+
+	FVector _fallOutOfWorldPosition = FVector::ZeroVector;
+	float _currentRescueTime = 0.0f;
+
+	UPROPERTY(EditAnywhere, Category = "KillZ")
+	float _timeToRescuePlayer = 3.f;
 
 	UPROPERTY(EditAnywhere, Category = "Effects", meta = (ClampMin = "0.0"))
 	float _defaultEffectCooldown = 5.0f;

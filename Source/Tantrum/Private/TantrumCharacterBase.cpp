@@ -41,7 +41,6 @@ static TAutoConsoleVariable<bool> CVarDisplayThrowVelocity(
 ATantrumCharacterBase::ATantrumCharacterBase() {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true; // Replicating the player
-	SetReplicateMovement(true); // Character movement replication
 
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 		
@@ -109,6 +108,9 @@ void ATantrumCharacterBase::RequestSprint() {
 	}
 
 	GetCharacterMovement()->MaxWalkSpeed = _sprintSpeed;
+	// You get in here from the client side, because inputs are read by clients.
+	// If the replica is sprinting but the authority is not, you'll get pulled back or suffer a stutter effect.
+	_serverSprintStart();
 }
 
 void ATantrumCharacterBase::RequestSprintCancelation() {
@@ -204,6 +206,7 @@ void ATantrumCharacterBase::_multicastRequestThrowObject_Implementation() {
 }
 
 void ATantrumCharacterBase::_clientThrowableAttached_Implementation(AThrowable* throwable) {
+	// check(IsNetMode(ENetMode::NM_Client));
 	_characterThrowState = ECharacterThrowState::Attached;
 	_throwable = throwable;
 	MoveIgnoreActorAdd(_throwable.Get());
@@ -211,6 +214,11 @@ void ATantrumCharacterBase::_clientThrowableAttached_Implementation(AThrowable* 
 
 void ATantrumCharacterBase::Tick(const float deltaSeconds) {
 	Super::Tick(deltaSeconds);
+
+	if (IsBeingRescued()) {
+		_updateRescue(deltaSeconds);
+		return;
+	}
 
 	/* The replica does not need to concern itself with trying to throw an object and doing raycasts for objects. 
 	 * Consider you have a 4 player game, and let's consider player #2 for example.
@@ -279,6 +287,45 @@ void ATantrumCharacterBase::OnRep_CharacterThrowState(const ECharacterThrowState
 	}
 }
 
+void ATantrumCharacterBase::OnRep_IsBeingRescued() {
+	if (_isBeingRescued) {
+		_startRescue();
+	} else {
+		_endRescue();
+	}
+}
+
+void ATantrumCharacterBase::_startRescue() {
+	_isBeingRescued = true;
+	// _fallOutOfWorldPosition isn't replicated, only _lastGroundPosition is. Smooth transition from arbitrary start point
+	// to a common, server-dictated, position.
+	_fallOutOfWorldPosition = GetActorLocation();
+	_currentRescueTime = 0.0f;
+	GetCharacterMovement()->Deactivate();
+	SetActorEnableCollision(false);
+}
+
+void ATantrumCharacterBase::_updateRescue(const float deltaTime) {
+	_currentRescueTime += deltaTime;
+	const auto alpha = FMath::Clamp(_currentRescueTime / _timeToRescuePlayer, 0.0f, 1.0f);
+	const auto newPlayerLocation = FMath::Lerp(_fallOutOfWorldPosition, _lastGroundPosition, alpha);
+	SetActorLocation(newPlayerLocation);
+
+	if (HasAuthority() && alpha >= 1.0f) {
+		_endRescue();
+	}
+}
+
+void ATantrumCharacterBase::_endRescue() {
+	// Only authority should (de)activate the character movement. This is an authority-only function.
+	check(HasAuthority());
+	
+	_isBeingRescued = false;
+	GetCharacterMovement()->Activate();
+	SetActorEnableCollision(true);
+	_currentRescueTime = 0.0f;
+}
+
 void ATantrumCharacterBase::ApplyEffect_Implementation(EEffectType effectType, bool bIsBuff) {
 	if (_bIsUnderEffect) {
 		return;
@@ -306,8 +353,29 @@ void ATantrumCharacterBase::EndEffect() {
 	}
 }
 
+void ATantrumCharacterBase::FellOutOfWorld(const UDamageType& dmgType) {
+	// DO NOT call the Super, or you'll get a Destroy() and make the entier rescue logic useless
+	// Super::FellOutOfWorld(dmgType);
+
+	if (HasAuthority()) {
+		_startRescue();
+	}
+}
+
+void ATantrumCharacterBase::OnMovementModeChanged(EMovementMode prevMovementMode, uint8 previousCustomMode) {
+	// Authority takes care of _lastGroundPosition, which is replicated on clients
+	if (HasAuthority()) {
+		if (!IsBeingRescued() && (prevMovementMode == MOVE_Walking && GetCharacterMovement()->MovementMode == MOVE_Falling)) {
+			_lastGroundPosition = GetActorLocation() + GetActorForwardVector() * -100.0f + GetActorUpVector() * 100.0f;
+		}
+	}
+	Super::OnMovementModeChanged(prevMovementMode, previousCustomMode);
+}
+
 void ATantrumCharacterBase::BeginPlay() {
 	Super::BeginPlay();
+
+	SetReplicateMovement(true); // Character movement replication
 
 	_effectCooldown = _defaultEffectCooldown;
 }
@@ -375,6 +443,10 @@ bool ATantrumCharacterBase::_playCelebrateMontage() {
 	}
 
 	return bPlayedSuccessfully;
+}
+
+void ATantrumCharacterBase::_serverSprintStart_Implementation() {
+	GetCharacterMovement()->MaxWalkSpeed = _sprintSpeed;
 }
 
 void ATantrumCharacterBase::_serverRequestPullObject_Implementation(bool bIsPulling) {
