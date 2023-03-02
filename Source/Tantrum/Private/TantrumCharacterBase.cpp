@@ -80,6 +80,10 @@ void ATantrumCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	sharedParams.Condition = COND_SkipOwner; // The machine that sent the replication request sets the new value locally, so there is no point in having the server sending it back.
 
 	DOREPLIFETIME_WITH_PARAMS_FAST(ATantrumCharacterBase, _characterThrowState, sharedParams);
+
+	sharedParams.Condition = COND_None;
+	DOREPLIFETIME_WITH_PARAMS_FAST(ATantrumCharacterBase, _isBeingRescued, sharedParams);
+	DOREPLIFETIME_WITH_PARAMS_FAST(ATantrumCharacterBase, _lastGroundPosition, sharedParams);
 }
 
 void ATantrumCharacterBase::Landed(const FHitResult& hit) {
@@ -317,9 +321,6 @@ void ATantrumCharacterBase::_updateRescue(const float deltaTime) {
 }
 
 void ATantrumCharacterBase::_endRescue() {
-	// Only authority should (de)activate the character movement. This is an authority-only function.
-	check(HasAuthority());
-	
 	_isBeingRescued = false;
 	GetCharacterMovement()->Activate();
 	SetActorEnableCollision(true);
