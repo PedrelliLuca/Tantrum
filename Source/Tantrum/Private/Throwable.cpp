@@ -116,11 +116,15 @@ void AThrowable::ToggleHighlight(bool bIsOn) {
 void AThrowable::BeginPlay() {
 	Super::BeginPlay();
 
-	_projectileMovementC->OnProjectileStop.AddDynamic(this, &AThrowable::_projectileStop);
+	if (HasAuthority()) {
+		_projectileMovementC->OnProjectileStop.AddDynamic(this, &AThrowable::_projectileStop);
+	}
 }
 
 void AThrowable::EndPlay(EEndPlayReason::Type endPlayReason) {
-	_projectileMovementC->OnProjectileStop.RemoveDynamic(this, &AThrowable::_projectileStop);
+	if (HasAuthority()) {
+		_projectileMovementC->OnProjectileStop.RemoveDynamic(this, &AThrowable::_projectileStop);
+	}
 
 	Super::EndPlay(endPlayReason);
 }
