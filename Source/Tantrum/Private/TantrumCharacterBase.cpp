@@ -41,6 +41,7 @@ static TAutoConsoleVariable<bool> CVarDisplayThrowVelocity(
 ATantrumCharacterBase::ATantrumCharacterBase() {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true; // Replicating the player
+	SetReplicateMovement(true);
 
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 		
@@ -210,7 +211,6 @@ void ATantrumCharacterBase::_multicastRequestThrowObject_Implementation() {
 }
 
 void ATantrumCharacterBase::_clientThrowableAttached_Implementation(AThrowable* throwable) {
-	// check(IsNetMode(ENetMode::NM_Client));
 	_characterThrowState = ECharacterThrowState::Attached;
 	_throwable = throwable;
 	MoveIgnoreActorAdd(_throwable.Get());
@@ -466,12 +466,12 @@ void ATantrumCharacterBase::_sphereCastPlayerView() {
 	const auto additionalDistance = (location - GetActorLocation()).Size(); // player to camera distance
 	const auto endLocation = location + (playerViewForward * (_pullRange + additionalDistance));
 
-	const auto forwardVector = GetActorForwardVector();
-	const auto dotProduct = FVector::DotProduct(playerViewForward, forwardVector);
+	const auto characterForwardVector = GetActorForwardVector();
+	const auto dotProduct = FVector::DotProduct(playerViewForward, characterForwardVector);
 
 	// Prevent picking up objects behind the character. This happens when the pull input is given with the camera looking
 	// at the character's front side.
-	if (dotProduct < -0.23f) {
+	if (dotProduct < -0.23) {
 		if (_throwable.IsValid()) {
 			_throwable->ToggleHighlight(false);
 			_throwable = nullptr;
@@ -527,6 +527,11 @@ void ATantrumCharacterBase::_lineCastActorTransform() {
 }
 
 void ATantrumCharacterBase::_processTraceResult(const FHitResult& hitResult) {
+	if (hitResult.bBlockingHit)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("%s(): Blocking hit!"), *FString{__FUNCTION__});
+	}
+	
 	const auto hitThrowable = Cast<AThrowable>(hitResult.GetActor());
 
 	const bool isSameActor = _throwable == hitThrowable;
@@ -557,6 +562,7 @@ void ATantrumCharacterBase::_processTraceResult(const FHitResult& hitResult) {
 		}
 
 		_serverPullObject(_throwable.Get());
+		_characterThrowState = ECharacterThrowState::Pulling;
 		_throwable->ToggleHighlight(false);
 	}
 }

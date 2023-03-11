@@ -19,7 +19,7 @@ AThrowable::AThrowable() {
 	_projectileMovementC = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("Projectile Movement"));
 
 	// This is to avoid the UpdatedComponent of the _projectileMovementC to auto-manage itself (auto-activation and deactivation).
-	// Needed beacause otherwise the projectle will turn itself off after laying on the ground for a bit.
+	// Needed because otherwise the projectile will turn itself off after laying on the ground for a bit.
 	_projectileMovementC->bAutoActivate = false;
 	_projectileMovementC->bShouldBounce = true;
 	_projectileMovementC->HomingAccelerationMagnitude = 1000.0f;

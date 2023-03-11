@@ -70,6 +70,8 @@ void ATantrumGameModeBase::_attemptStartGame() {
             _startGame();
         }
 
+    } else {
+	    UE_LOG(LogTemp, Warning, TEXT("%s(): Number of Players different from the expected one"), *FString{__FUNCTION__});
     }
 }
 
