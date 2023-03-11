@@ -85,11 +85,17 @@ void ATantrumCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	sharedParams.Condition = COND_None;
 	DOREPLIFETIME_WITH_PARAMS_FAST(ATantrumCharacterBase, _isBeingRescued, sharedParams);
 	DOREPLIFETIME_WITH_PARAMS_FAST(ATantrumCharacterBase, _lastGroundPosition, sharedParams);
+	DOREPLIFETIME_WITH_PARAMS_FAST(ATantrumCharacterBase, _isStunned, sharedParams);
 }
 
 void ATantrumCharacterBase::Landed(const FHitResult& hit) {
+	Super::Landed(hit);
+	const auto netModeString = _getNetModeDebugString();
+	UE_LOG(LogTemp, Warning, TEXT("%s() called in net mode %s"), *FString{__FUNCTION__}, *netModeString);
+	
 	const auto impactVelocity = FMath::Abs(GetVelocity().Z);
 	if (impactVelocity < _minStunVelocity) {
+		// Very light fall, do nothing
 		return;
 	}
 
@@ -101,14 +107,12 @@ void ATantrumCharacterBase::Landed(const FHitResult& hit) {
 		playerController->PlayDynamicForceFeedback(intensity, 0.5f, bAffectLarge, bAffectSmall, bAffectLarge, bAffectLarge);
 	}
 
-	_stunDuration = intensity * (_maxStunDuration - _minStunDuration);
-	_stunTime = 0.f;
-	GetCharacterMovement()->MaxWalkSpeed = 0.f;
+	_serverInitStun(intensity);
 }
 
 void ATantrumCharacterBase::RequestSprint() {
 	// Can't sprint while stunned
-	if (_isStunned()) {
+	if (_isStunned) {
 		return;
 	}
 
@@ -120,7 +124,7 @@ void ATantrumCharacterBase::RequestSprint() {
 
 void ATantrumCharacterBase::RequestSprintCancelation() {
 	// Can't sprint while stunned
-	if (_isStunned()) {
+	if (_isStunned) {
 		return;
 	}
 
@@ -145,7 +149,7 @@ bool ATantrumCharacterBase::IsHovering() const {
 }
 
 void ATantrumCharacterBase::RequestPull() {
-	if (!_isStunned() && _characterThrowState == ECharacterThrowState::None) {
+	if (!_isStunned && _characterThrowState == ECharacterThrowState::None) {
 		_characterThrowState = ECharacterThrowState::RequestingPull;
 		_serverRequestPullObject(true);
 	}
@@ -224,6 +228,11 @@ void ATantrumCharacterBase::Tick(const float deltaSeconds) {
 		return;
 	}
 
+	if (_isStunned) {
+		_serverUpdateStun(deltaSeconds);
+		return;
+	} 
+
 	/* The replica does not need to concern itself with trying to throw an object and doing raycasts for objects. 
 	 * Consider you have a 4 player game, and let's consider player #2 for example.
 	 * The character of player 2 is replicated 3 times on machines 1, 3, and 4. However, only the character on machine #2 will be able, through the player controller, to pull and throw objects,
@@ -233,11 +242,6 @@ void ATantrumCharacterBase::Tick(const float deltaSeconds) {
 	if (!IsLocallyControlled()) {
 		return;
 	}
-
-	_updateStun(deltaSeconds);
-	if (_isStunned()) {
-		return;
-	} 
 
 	if (_bIsUnderEffect) {
 		if (_effectCooldown > 0.0f) {
@@ -291,6 +295,16 @@ void ATantrumCharacterBase::OnRep_CharacterThrowState(const ECharacterThrowState
 	}
 }
 
+void ATantrumCharacterBase::OnRep_CharacterIsStunned(const bool oldIsStunned) {
+	if (_isStunned != oldIsStunned) {
+		const auto oldIsStunnedString = oldIsStunned ? FString{TEXT("True")} : FString{TEXT("False")};
+		UE_LOG(LogTemp, Warning, TEXT("%s(): OldIsStunned: %s"), *FString{__FUNCTION__}, *oldIsStunnedString);
+
+		const auto isStunnedString = _isStunned ? FString{TEXT("True")} : FString{TEXT("False")};
+		UE_LOG(LogTemp, Warning, TEXT("%s(): NewIsStunned: %s"), *FString{__FUNCTION__}, *isStunnedString);
+	}
+}
+
 void ATantrumCharacterBase::OnRep_IsBeingRescued() {
 	if (_isBeingRescued) {
 		_startRescue();
@@ -299,7 +313,43 @@ void ATantrumCharacterBase::OnRep_IsBeingRescued() {
 	}
 }
 
+void ATantrumCharacterBase::_serverInitStun_Implementation(const float stunIntensity) {
+	const auto netModeString = _getNetModeDebugString();
+	UE_LOG(LogTemp, Warning, TEXT("%s() called in net mode %s"), *FString{__FUNCTION__}, *netModeString);
+	
+	if (_isStunned)
+	{
+		// For now just early exit. Alternative option would be to add to the stun time
+		return;
+	}
+
+	_stunDuration = stunIntensity * (_maxStunDuration - _minStunDuration);
+	_stunTime = 0.f;
+	_isStunned = true;
+	GetCharacterMovement()->MaxWalkSpeed = 0.f;
+}
+
+void ATantrumCharacterBase::_serverUpdateStun_Implementation(float deltaSeconds) {
+	const auto netModeString = _getNetModeDebugString();
+	UE_LOG(LogTemp, Warning, TEXT("%s() called in net mode %s"), *FString{__FUNCTION__}, *netModeString);
+	
+	check(_isStunned);
+
+	_stunTime += deltaSeconds;
+	if (_stunTime > _stunDuration) {
+		GetCharacterMovement()->MaxWalkSpeed = _walkSpeed;
+		_stunTime = 0.0f;
+		_isStunned = false;
+		return;
+	}
+
+	GetCharacterMovement()->MaxWalkSpeed = _walkSpeed * (_stunTime / _stunDuration);
+}
+
 void ATantrumCharacterBase::_startRescue() {
+	const auto netModeString = _getNetModeDebugString();
+	UE_LOG(LogTemp, Warning, TEXT("%s() called in net mode %s"), *FString{__FUNCTION__}, *netModeString);
+	
 	_isBeingRescued = true;
 	// _fallOutOfWorldPosition isn't replicated, only _lastGroundPosition is. Smooth transition from arbitrary start point
 	// to a common, server-dictated, position.
@@ -310,6 +360,12 @@ void ATantrumCharacterBase::_startRescue() {
 }
 
 void ATantrumCharacterBase::_updateRescue(const float deltaTime) {
+	if (!IsBeingRescued())
+	{
+		const auto netModeString = _getNetModeDebugString();
+		UE_LOG(LogTemp, Error, TEXT("%s() called with false _isBeingRescued in net mode %s"), *FString{__FUNCTION__}, *netModeString);
+	}
+	
 	_currentRescueTime += deltaTime;
 	const auto alpha = FMath::Clamp(_currentRescueTime / _timeToRescuePlayer, 0.0f, 1.0f);
 	const auto newPlayerLocation = FMath::Lerp(_fallOutOfWorldPosition, _lastGroundPosition, alpha);
@@ -321,6 +377,9 @@ void ATantrumCharacterBase::_updateRescue(const float deltaTime) {
 }
 
 void ATantrumCharacterBase::_endRescue() {
+	const auto netModeString = _getNetModeDebugString();
+	UE_LOG(LogTemp, Warning, TEXT("%s() called in net mode %s"), *FString{__FUNCTION__}, *netModeString);
+	
 	_isBeingRescued = false;
 	GetCharacterMovement()->Activate();
 	SetActorEnableCollision(true);
@@ -379,21 +438,6 @@ void ATantrumCharacterBase::BeginPlay() {
 	SetReplicateMovement(true); // Character movement replication
 
 	_effectCooldown = _defaultEffectCooldown;
-}
-
-void ATantrumCharacterBase::_updateStun(const float deltaSeconds) {
-	if (_stunTime < 0.f) {
-		return;
-	}
-
-	_stunTime += deltaSeconds;
-	if (_stunTime > _stunDuration) {
-		GetCharacterMovement()->MaxWalkSpeed = _walkSpeed;
-		_stunTime = -1.f;
-		return;
-	}
-
-	GetCharacterMovement()->MaxWalkSpeed = _walkSpeed * (_stunTime / _stunDuration);
 }
 
 bool ATantrumCharacterBase::_playThrowMontage() {
@@ -527,11 +571,6 @@ void ATantrumCharacterBase::_lineCastActorTransform() {
 }
 
 void ATantrumCharacterBase::_processTraceResult(const FHitResult& hitResult) {
-	if (hitResult.bBlockingHit)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("%s(): Blocking hit!"), *FString{__FUNCTION__});
-	}
-	
 	const auto hitThrowable = Cast<AThrowable>(hitResult.GetActor());
 
 	const bool isSameActor = _throwable == hitThrowable;
@@ -680,4 +719,21 @@ void ATantrumCharacterBase::_serverFinishThrow_Implementation() {
 }
 
 void ATantrumCharacterBase::_onNotifyEndReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload) {
+}
+
+FString ATantrumCharacterBase::_getNetModeDebugString() const {
+	const auto netMode = GetNetMode();
+	auto netModeString = FString{};
+	switch(netMode) {
+	case NM_Client:
+		netModeString = "client";
+		break;
+	case NM_ListenServer:
+		netModeString = "listen server";
+		break;
+	default:
+		checkNoEntry();
+	}
+	
+	return netModeString;
 }

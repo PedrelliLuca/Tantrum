@@ -81,6 +81,9 @@ protected:
 	void OnRep_CharacterThrowState(const ECharacterThrowState& oldCharacterThrowState);
 
 	UFUNCTION()
+	void OnRep_CharacterIsStunned(bool oldIsStunned);
+
+	UFUNCTION()
 	void OnRep_IsBeingRescued();
 
 	/** Camera boom positioning the camera behind the character */
@@ -92,9 +95,6 @@ protected:
 	TObjectPtr<UCameraComponent> _followCamera;
 
 private:
-	void _updateStun(float deltaSeconds);
-	bool _isStunned() const { return _stunTime > 0.0f; }
-
 	bool _playThrowMontage();
 	bool _playCelebrateMontage();
 
@@ -127,6 +127,13 @@ private:
 	UFUNCTION(NetMulticast, Reliable)
 	void _multicastPlayCelebrateMontage();
 
+	UFUNCTION(Server, Reliable)
+	void _serverInitStun(float stunIntensity);
+
+	UFUNCTION(Server, Reliable)
+	void _serverUpdateStun(float deltaSeconds);
+
+
 	// These only happen on the server; the variable _isBeingRescued is replicated.
 	void _startRescue();
 	void _updateRescue(float deltaTime);
@@ -147,6 +154,8 @@ private:
 	UFUNCTION()
 	void _onNotifyEndReceived(FName notifyName, const FBranchingPointNotifyPayload& branchingPointNotifyPayload);
 
+	FString _getNetModeDebugString() const;
+
 	UPROPERTY(EditAnywhere, Category = "Input")
 	float _sprintSpeed = 1200.0f;
 
@@ -165,6 +174,9 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Stun")
 	float _minStunDuration = 1.f;
+
+	UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_CharacterIsStunned, Category = "Stun")
+	bool _isStunned = false;
 
 	float _stunDuration = 0.f;
 	float _stunTime = -1.f;
