@@ -346,6 +346,11 @@ void ATantrumCharacterBase::_serverUpdateStun_Implementation(float deltaSeconds)
 	GetCharacterMovement()->MaxWalkSpeed = _walkSpeed * (_stunTime / _stunDuration);
 }
 
+void ATantrumCharacterBase::_clientResetThrowable_Implementation() {
+	_characterThrowState = ECharacterThrowState::None;
+	_throwable = nullptr;
+}
+
 void ATantrumCharacterBase::_startRescue() {
 	const auto netModeString = _getNetModeDebugString();
 	UE_LOG(LogTemp, Warning, TEXT("%s() called in net mode %s"), *FString{__FUNCTION__}, *netModeString);
@@ -660,6 +665,8 @@ void ATantrumCharacterBase::ResetThrowableObject() {
 	}
 	_characterThrowState = ECharacterThrowState::None;
 	_throwable = nullptr;
+
+	_clientResetThrowable();
 }
 
 void ATantrumCharacterBase::OnThrowableAttached(AThrowable* throwable) {

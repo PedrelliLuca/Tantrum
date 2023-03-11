@@ -118,6 +118,9 @@ private:
 	UFUNCTION(Client, Reliable)
 	void _clientThrowableAttached(AThrowable* throwable);
 
+	UFUNCTION(Client, Reliable)
+	void _clientResetThrowable();
+
 	UFUNCTION(Server, Reliable)
 	void _serverBeginThrow();
 
