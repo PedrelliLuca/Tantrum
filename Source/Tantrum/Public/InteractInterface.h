@@ -8,24 +8,25 @@
 
 UINTERFACE(MinimalAPI)
 class UInteractInterface : public UInterface {
-	GENERATED_BODY()
+    GENERATED_BODY()
 };
 
 UENUM(BlueprintType)
-enum class EEffectType : uint8 {
-	None  UMETA(DisplayName = "None"),
-	Speed UMETA(DisplayName = "SpeedBuff"),
-	Jump  UMETA(DisplayName = "JumpBuff"),
-	Power UMETA(DisplayName = "PowerBuff")
+enum class EEffectType : uint8
+{
+    None UMETA(DisplayName = "None"),
+    Speed UMETA(DisplayName = "SpeedBuff"),
+    Jump UMETA(DisplayName = "JumpBuff"),
+    Power UMETA(DisplayName = "PowerBuff")
 };
 
 /**
- * 
+ *
  */
 class TANTRUM_API IInteractInterface {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interact")
-	void ApplyEffect(EEffectType effectType, bool bIsBuff);
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interact")
+    void ApplyEffect(EEffectType effectType, bool bIsBuff);
 };

@@ -8,16 +8,16 @@
 #include "TantrumLevelEndTrigger.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class TANTRUM_API ATantrumLevelEndTrigger : public ATriggerVolume {
-	GENERATED_BODY()
-	
+    GENERATED_BODY()
+
 public:
-	ATantrumLevelEndTrigger();
+    ATantrumLevelEndTrigger();
 
 private:
-	UFUNCTION()
-	void _communicateGameEnd(AActor* overlappedActor, AActor* otherActor);
+    UFUNCTION()
+    void _communicateGameEnd(AActor* overlappedActor, AActor* otherActor);
 };

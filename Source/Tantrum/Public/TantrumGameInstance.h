@@ -16,31 +16,31 @@
  */
 UCLASS()
 class TANTRUM_API UTantrumGameInstance : public UGameInstance {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	void DisplayCountdown(float gameCountdownDuration, ATantrumPlayerController* tantrumPlayerController);
-	void DisplayLevelComplete(ATantrumPlayerController* tantrumPlayerController);
-	
-	UFUNCTION(BlueprintPure)
-	ATantrumGameStateBase* GetGameState() const { return _tantrumGameStateBase;  }
+    void DisplayCountdown(float gameCountdownDuration, ATantrumPlayerController* tantrumPlayerController);
+    void DisplayLevelComplete(ATantrumPlayerController* tantrumPlayerController);
 
-	UFUNCTION(BlueprintCallable)
-	void OnRetrySelected(ATantrumPlayerController* tantrumPlayerController);
+    UFUNCTION(BlueprintPure)
+    ATantrumGameStateBase* GetGameState() const { return _tantrumGameStateBase; }
 
-	UFUNCTION()
-	void RestartGame(ATantrumPlayerController* tantrumPlayerController);
+    UFUNCTION(BlueprintCallable)
+    void OnRetrySelected(ATantrumPlayerController* tantrumPlayerController);
+
+    UFUNCTION()
+    void RestartGame(ATantrumPlayerController* tantrumPlayerController);
 
 private:
-	UFUNCTION()
-	void _onGameStateSet(AGameStateBase* gameStateBase);
+    UFUNCTION()
+    void _onGameStateSet(AGameStateBase* gameStateBase);
 
-	UPROPERTY(EditAnywhere, Category = "Widget")
-	TSubclassOf<UTantrumGameWidget> _gameWidgetClass = nullptr;
+    UPROPERTY(EditAnywhere, Category = "Widget")
+    TSubclassOf<UTantrumGameWidget> _gameWidgetClass = nullptr;
 
-	UPROPERTY()
-	TMap<APlayerController*, UTantrumGameWidget*> _gameWidgets;
+    UPROPERTY()
+    TMap<APlayerController*, UTantrumGameWidget*> _gameWidgets;
 
-	UPROPERTY()
-	TObjectPtr<ATantrumGameStateBase> _tantrumGameStateBase;
+    UPROPERTY()
+    TObjectPtr<ATantrumGameStateBase> _tantrumGameStateBase;
 };

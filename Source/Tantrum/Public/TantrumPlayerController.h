@@ -11,87 +11,86 @@
 #include "TantrumPlayerController.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class TANTRUM_API ATantrumPlayerController : public APlayerController {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	UFUNCTION(Client, Reliable)
-	void ClientDisplayCountdown(float gameCountdownDuration);
+    UFUNCTION(Client, Reliable)
+    void ClientDisplayCountdown(float gameCountdownDuration);
 
-	UFUNCTION(Client, Reliable)
-	void ClientRestartGame();
+    UFUNCTION(Client, Reliable)
+    void ClientRestartGame();
 
-	UFUNCTION(Client, Reliable)
-	void ClientReachedEnd();
-	
-	UFUNCTION(Server, Reliable)
-	void ServerRestartLevel();
+    UFUNCTION(Client, Reliable)
+    void ClientReachedEnd();
+
+    UFUNCTION(Server, Reliable)
+    void ServerRestartLevel();
 
 protected:
-	void BeginPlay() override;
-	
-	void SetupInputComponent() override;
+    void BeginPlay() override;
 
-	UPROPERTY(EditAnywhere, Category = "Input")
-	TObjectPtr<UInputMappingContext> _defaultMappingContext;
+    void SetupInputComponent() override;
 
-	UPROPERTY(EditAnywhere, Category = "Input")
-	TObjectPtr<UInputAction> _jumpAction;
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<UInputMappingContext> _defaultMappingContext;
 
-	UPROPERTY(EditAnywhere, Category = "Input")
-	TObjectPtr<UInputAction> _moveAction;
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<UInputAction> _jumpAction;
 
+    UPROPERTY(EditAnywhere, Category = "Input")
+    TObjectPtr<UInputAction> _moveAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputAction> _lookAction;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    TObjectPtr<UInputAction> _lookAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputAction> _sprintAction;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    TObjectPtr<UInputAction> _sprintAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputAction> _crouchAction;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    TObjectPtr<UInputAction> _crouchAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputAction> _pullAction;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    TObjectPtr<UInputAction> _pullAction;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputAction> _throwAction;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+    TObjectPtr<UInputAction> _throwAction;
 
-	UPROPERTY(EditAnywhere, Category = "Input")
-	float _flickThreshold = 0.75f;
+    UPROPERTY(EditAnywhere, Category = "Input")
+    float _flickThreshold = 0.75f;
 
-	void ReceivedPlayer() override;
+    void ReceivedPlayer() override;
 
 private:
-	bool _canProcessRequest() const;
+    bool _canProcessRequest() const;
 
-	void _jump();
-	void _stopJumping();
+    void _jump();
+    void _stopJumping();
 
-	void _move(const FInputActionValue& value);
+    void _move(const FInputActionValue& value);
 
-	void _look(const FInputActionValue& value);
+    void _look(const FInputActionValue& value);
 
-	void _sprintTriggered();
-	void _sprintCanceled();
+    void _sprintTriggered();
+    void _sprintCanceled();
 
-	void _crouchTriggered();
-	void _crouchCanceled();
+    void _crouchTriggered();
+    void _crouchCanceled();
 
-	void _pullTriggered();
-	void _pullCanceled();
+    void _pullTriggered();
+    void _pullCanceled();
 
-	void _throw(const FInputActionValue& value);
+    void _throw(const FInputActionValue& value);
 
-	float _lastThrowAxis = 0;
+    float _lastThrowAxis = 0;
 
-	UPROPERTY(EditAnywhere, Category = "HUD")
+    UPROPERTY(EditAnywhere, Category = "HUD")
     TSubclassOf<UUserWidget> _hudClass = nullptr;
 
-	UPROPERTY()
+    UPROPERTY()
     TObjectPtr<UUserWidget> _hudWidget;
 
     TWeakObjectPtr<ATantrumGameStateBase> _tantrumGameState;

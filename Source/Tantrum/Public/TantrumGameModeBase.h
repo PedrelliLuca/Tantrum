@@ -9,32 +9,32 @@
 #include "TantrumGameModeBase.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class TANTRUM_API ATantrumGameModeBase : public AGameModeBase {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	ATantrumGameModeBase();
+    ATantrumGameModeBase();
 
-	void RestartGame();
+    void RestartGame();
 
 protected:
-	void BeginPlay() override;
-	void RestartPlayer(AController* newPlayer) override;
+    void BeginPlay() override;
+    void RestartPlayer(AController* newPlayer) override;
 
 private:
-	void _attemptStartGame();
-	void _displayCountdown();
-	void _startGame();
+    void _attemptStartGame();
+    void _displayCountdown();
+    void _startGame();
 
-	UFUNCTION(BlueprintCallable, Category = "Game Details")
-	void _setNumExpectedPlayers(const uint8 numExpectedPlayers) { _numExpectedPlayers = numExpectedPlayers; }
+    UFUNCTION(BlueprintCallable, Category = "Game Details")
+    void _setNumExpectedPlayers(const uint8 numExpectedPlayers) { _numExpectedPlayers = numExpectedPlayers; }
 
-	UPROPERTY(EditAnywhere, Category = "Game Details")
-	uint8 _numExpectedPlayers = 1u;
+    UPROPERTY(EditAnywhere, Category = "Game Details")
+    uint8 _numExpectedPlayers = 1u;
 
-	UPROPERTY(EditAnywhere, Category = "Game Details")
-	float _gameCountdownDuration = 2.0f;
+    UPROPERTY(EditAnywhere, Category = "Game Details")
+    float _gameCountdownDuration = 2.0f;
 };

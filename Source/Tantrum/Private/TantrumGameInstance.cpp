@@ -1,6 +1,5 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-
 #include "TantrumGameInstance.h"
 
 void UTantrumGameInstance::DisplayCountdown(const float gameCountdownDuration, ATantrumPlayerController* const tantrumPlayerController) {
@@ -27,7 +26,6 @@ void UTantrumGameInstance::DisplayCountdown(const float gameCountdownDuration, A
             GetWorld()->GameStateSetEvent.AddUObject(this, &UTantrumGameInstance::_onGameStateSet);
         }
     }
-
 }
 
 void UTantrumGameInstance::DisplayLevelComplete(ATantrumPlayerController* tantrumPlayerController) {
@@ -40,28 +38,26 @@ void UTantrumGameInstance::DisplayLevelComplete(ATantrumPlayerController* tantru
 // We get here by clicking on the "Retry" button of the widget
 void UTantrumGameInstance::OnRetrySelected(ATantrumPlayerController* tantrumPlayerController) {
     const auto maybeGameWidget = _gameWidgets.Find(tantrumPlayerController);
-	if (maybeGameWidget) {
+    if (maybeGameWidget) {
         // Simple cleanup of the UI
-		RestartGame(tantrumPlayerController); 
+        RestartGame(tantrumPlayerController);
         // This is the real restart, performed via GameMode (see function implementation). The GameMode can be accessed only via server,
         // that's the machine that has authority on it, and GameMode is not replicated.
-		tantrumPlayerController->ServerRestartLevel(); 
-	}
+        tantrumPlayerController->ServerRestartLevel();
+    }
 }
 
 void UTantrumGameInstance::RestartGame(ATantrumPlayerController* tantrumPlayerController) {
     const auto gameWidget = _gameWidgets.Find(tantrumPlayerController);
-	if (gameWidget)
-	{
-		(*gameWidget)->RemoveResults();
-		//restore game input 
-		FInputModeGameOnly inputMode;
-		tantrumPlayerController->SetInputMode(inputMode);
-		tantrumPlayerController->SetShowMouseCursor(false);
-	}
+    if (gameWidget) {
+        (*gameWidget)->RemoveResults();
+        // restore game input
+        FInputModeGameOnly inputMode;
+        tantrumPlayerController->SetInputMode(inputMode);
+        tantrumPlayerController->SetShowMouseCursor(false);
+    }
 }
 
 void UTantrumGameInstance::_onGameStateSet(AGameStateBase* gameStateBase) {
     _tantrumGameStateBase = Cast<ATantrumGameStateBase>(gameStateBase);
 }
-

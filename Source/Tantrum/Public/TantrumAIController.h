@@ -2,16 +2,14 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
 #include "AIController.h"
+#include "CoreMinimal.h"
 #include "TantrumAIController.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
-class TANTRUM_API ATantrumAIController : public AAIController
-{
-	GENERATED_BODY()
-	
+class TANTRUM_API ATantrumAIController : public AAIController {
+    GENERATED_BODY()
 };

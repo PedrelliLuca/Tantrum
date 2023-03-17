@@ -1,6 +1,5 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-
 #include "TantrumGameModeBase.h"
 
 #include "GameFramework/CharacterMovementComponent.h"
@@ -16,34 +15,34 @@ ATantrumGameModeBase::ATantrumGameModeBase() {
 void ATantrumGameModeBase::RestartGame() {
     ResetLevel();
 
-	for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator) {
-		const auto playerController = iterator->Get();
+    for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator) {
+        const auto playerController = iterator->Get();
 
-		if (playerController && playerController->PlayerState && !MustSpectate(playerController)) {
-			//call something to clean up the hud 
-			if (const auto tantrumnPlayerController = Cast<ATantrumPlayerController>(playerController)) {
-				tantrumnPlayerController->ClientRestartGame();
-			}
-			RestartPlayer(playerController);
-		}
-	}
+        if (playerController && playerController->PlayerState && !MustSpectate(playerController)) {
+            // call something to clean up the hud
+            if (const auto tantrumnPlayerController = Cast<ATantrumPlayerController>(playerController)) {
+                tantrumnPlayerController->ClientRestartGame();
+            }
+            RestartPlayer(playerController);
+        }
+    }
 }
 
 void ATantrumGameModeBase::RestartPlayer(AController* newPlayer) {
     Super::RestartPlayer(newPlayer);
 
-	if (const auto playerController = Cast<APlayerController>(newPlayer)) {
-		if (playerController->GetCharacter() && playerController->GetCharacter()->GetCharacterMovement()) {
-			playerController->GetCharacter()->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+    if (const auto playerController = Cast<APlayerController>(newPlayer)) {
+        if (playerController->GetCharacter() && playerController->GetCharacter()->GetCharacterMovement()) {
+            playerController->GetCharacter()->GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 
-			const auto playerState = playerController->GetPlayerState<ATantrumPlayerState>();
-			if (playerState) {
-				playerState->SetCurrentState(EPlayerGameState::Waiting);
-			}
-		}
-	}
+            const auto playerState = playerController->GetPlayerState<ATantrumPlayerState>();
+            if (playerState) {
+                playerState->SetCurrentState(EPlayerGameState::Waiting);
+            }
+        }
+    }
 
-	_attemptStartGame();
+    _attemptStartGame();
 }
 
 void ATantrumGameModeBase::BeginPlay() {
@@ -53,7 +52,6 @@ void ATantrumGameModeBase::BeginPlay() {
         tantrumGameState->SetGameState(EGameState::Waiting);
     }
 }
-
 
 void ATantrumGameModeBase::_attemptStartGame() {
     if (const auto tantrumGameState = GetGameState<ATantrumGameStateBase>()) {
@@ -71,7 +69,7 @@ void ATantrumGameModeBase::_attemptStartGame() {
         }
 
     } else {
-	    UE_LOG(LogTemp, Warning, TEXT("%s(): Number of Players different from the expected one"), *FString{__FUNCTION__});
+        UE_LOG(LogTemp, Warning, TEXT("%s(): Number of Players different from the expected one"), *FString{__FUNCTION__});
     }
 }
 
@@ -87,27 +85,23 @@ void ATantrumGameModeBase::_displayCountdown() {
 }
 
 void ATantrumGameModeBase::_startGame() {
-    if (const auto tantrumGameState = GetGameState<ATantrumGameStateBase>())
-	{
-		tantrumGameState->SetGameState(EGameState::Playing);
-		tantrumGameState->ClearResults();
-	}
+    if (const auto tantrumGameState = GetGameState<ATantrumGameStateBase>()) {
+        tantrumGameState->SetGameState(EGameState::Playing);
+        tantrumGameState->ClearResults();
+    }
 
-	for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator)
-	{
-		const auto playerController = iterator->Get();
-		if (playerController && playerController->PlayerState && !MustSpectate(playerController))
-		{
-			FInputModeGameOnly InputMode;
-			playerController->SetInputMode(InputMode);
-			playerController->SetShowMouseCursor(false);
+    for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator) {
+        const auto playerController = iterator->Get();
+        if (playerController && playerController->PlayerState && !MustSpectate(playerController)) {
+            FInputModeGameOnly InputMode;
+            playerController->SetInputMode(InputMode);
+            playerController->SetShowMouseCursor(false);
 
-			const auto playerState = playerController->GetPlayerState<ATantrumPlayerState>();
-			if (playerState)
-			{
-				playerState->SetCurrentState(EPlayerGameState::Playing);
-				playerState->SetIsWinner(false);
-			}
-		}
-	}
+            const auto playerState = playerController->GetPlayerState<ATantrumPlayerState>();
+            if (playerState) {
+                playerState->SetCurrentState(EPlayerGameState::Playing);
+                playerState->SetIsWinner(false);
+            }
+        }
+    }
 }
