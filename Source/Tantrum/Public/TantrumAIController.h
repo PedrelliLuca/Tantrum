@@ -2,8 +2,11 @@
 
 #pragma once
 
-#include "AIController.h"
 #include "CoreMinimal.h"
+
+#include "AIController.h"
+#include "BehaviorTree/BehaviorTree.h"
+
 #include "TantrumAIController.generated.h"
 
 /**
@@ -12,4 +15,29 @@
 UCLASS()
 class TANTRUM_API ATantrumAIController : public AAIController {
     GENERATED_BODY()
+
+public:
+    ATantrumAIController();
+
+    void OnPossess(APawn* inPawn) override;
+
+    void OnUnPossess() override;
+
+    void Tick(float deltaTime) override;
+
+protected:
+    void BeginPlay() override;
+
+private:
+    UPROPERTY(EditDefaultsOnly, Category = "Tantrum AI | Behavior Tree")
+    TObjectPtr<UBehaviorTree> _behaviorTree;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Tantrum AI | Goal Class")
+    TSubclassOf<AActor> _goalActorClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Tantrum AI | Blackboard Keys")
+    FName _destinationKeyName = "Destination";
+
+    UPROPERTY(EditDefaultsOnly, Category = "Tantrum AI | Blackboard Keys")
+    FName _isPlayingKeyName = "IsPlaying";
 };
