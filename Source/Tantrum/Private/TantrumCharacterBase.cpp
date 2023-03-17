@@ -739,7 +739,7 @@ FString ATantrumCharacterBase::_getNetModeDebugString() const {
 		netModeString = "listen server";
 		break;
 	default:
-		checkNoEntry();
+		netModeString = "NONE";
 	}
 	
 	return netModeString;
