@@ -6,6 +6,7 @@
 
 #include "AIController.h"
 #include "BehaviorTree/BehaviorTree.h"
+#include "Throwable.h"
 
 #include "TantrumAIController.generated.h"
 
@@ -25,18 +26,25 @@ public:
 
     void Tick(float deltaTime) override;
 
-    // Mimicks ATantrumPlayerController::ClientReachedEnd() by playing the celebrate montage but without showing any UI 
+    // Mimicks ATantrumPlayerController::ClientReachedEnd() by playing the celebrate montage but without showing any UI
     void OnReachedEnd();
 
 protected:
     void BeginPlay() override;
 
 private:
+    void _setThrowableAsDestination();
+
+    void _setRaceEndAsDestination();
+
     UPROPERTY(EditDefaultsOnly, Category = "Tantrum AI | Behavior Tree")
     TObjectPtr<UBehaviorTree> _behaviorTree;
 
     UPROPERTY(EditDefaultsOnly, Category = "Tantrum AI | Goal Class")
     TSubclassOf<AActor> _goalActorClass;
+
+    UPROPERTY(EditDefaultsOnly, Category = "Tantrum AI | Goal Class")
+    TSubclassOf<AThrowable> _throwableActorClass;
 
     UPROPERTY(EditDefaultsOnly, Category = "Tantrum AI | Blackboard Keys")
     FName _destinationKeyName = "Destination";

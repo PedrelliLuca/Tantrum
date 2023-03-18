@@ -58,6 +58,23 @@ void ATantrumAIController::BeginPlay() {
         return;
     }
 
+    // Change this to _setRaceEndAsDestination() when testing the racing maps
+    _setThrowableAsDestination();
+}
+
+void ATantrumAIController::_setThrowableAsDestination() {
+    TArray<AActor*> actorsOfClass;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), _throwableActorClass, actorsOfClass);
+
+    if (!actorsOfClass.IsEmpty()) {
+        const auto throwableActor = actorsOfClass.Last();
+
+        const auto blackBoard = GetBlackboardComponent();
+        blackBoard->SetValueAsVector(_destinationKeyName, throwableActor->GetActorLocation());
+    }
+}
+
+void ATantrumAIController::_setRaceEndAsDestination() {
     TArray<AActor*> actorsOfClass;
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), _goalActorClass, actorsOfClass);
 
