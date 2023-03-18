@@ -11,6 +11,8 @@
 ATantrumAIController::ATantrumAIController() {
     // Needed for GetPlayerState() to work related logic from the AI Controller
     bWantsPlayerState = true;
+
+    _perceptionC = CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("PerceptionComponent"));
 }
 
 void ATantrumAIController::OnPossess(APawn* const inPawn) {
@@ -30,21 +32,28 @@ void ATantrumAIController::OnUnPossess() {
 void ATantrumAIController::Tick(float deltaTime) {
     Super::Tick(deltaTime);
 
+    const auto blackBoard = GetBlackboardComponent();
+
     const auto tantrumGameState = Cast<ATantrumGameStateBase>(GetWorld()->GetGameState());
     if (IsValid(tantrumGameState)) {
-        const auto blackBoard = GetBlackboardComponent();
         blackBoard->SetValueAsBool(_isPlayingKeyName, tantrumGameState->IsPlaying());
+    }
+
+    if (const auto tantrumCharacter = Cast<ATantrumCharacterBase>(GetCharacter()); IsValid(tantrumCharacter)) {
+        blackBoard->SetValueAsBool(_canThrowKeyName, tantrumCharacter->CanThrow());
     }
 }
 
 void ATantrumAIController::OnReachedEnd() {
-    if (const auto tantrumCharacter = Cast<ATantrumCharacterBase>(GetCharacter())) {
+    if (const auto tantrumCharacter = Cast<ATantrumCharacterBase>(GetCharacter()); IsValid(tantrumCharacter)) {
         tantrumCharacter->ServerPlayCelebrateMontage();
     }
 }
 
 void ATantrumAIController::BeginPlay() {
     Super::BeginPlay();
+
+    _perceptionC->OnTargetPerceptionUpdated.AddDynamic(this, &ATantrumAIController::_onActorSensed);
 
     if (!IsValid(_behaviorTree)) {
         UE_LOG(LogTemp, Error, TEXT("%s(): Invalid Behavior Tree!"), *FString{__FUNCTION__});
@@ -60,6 +69,16 @@ void ATantrumAIController::BeginPlay() {
 
     // Change this to _setRaceEndAsDestination() when testing the racing maps
     // _setThrowableAsDestination(); // Useless if we use the EQS
+}
+
+void ATantrumAIController::_onActorSensed(AActor* actor, FAIStimulus stimulus) {
+    const auto blackBoard = GetBlackboardComponent();
+    check(IsValid(blackBoard));
+    if (stimulus.WasSuccessfullySensed()) {
+        blackBoard->SetValueAsObject(_targetEnemyKeyName, actor);
+    } else {
+        blackBoard->SetValueAsObject(_targetEnemyKeyName, nullptr);
+    }
 }
 
 void ATantrumAIController::_setThrowableAsDestination() {

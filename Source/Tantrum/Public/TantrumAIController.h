@@ -6,6 +6,7 @@
 
 #include "AIController.h"
 #include "BehaviorTree/BehaviorTree.h"
+#include "Perception/AIPerceptionComponent.h"
 #include "Throwable.h"
 
 #include "TantrumAIController.generated.h"
@@ -33,6 +34,9 @@ protected:
     void BeginPlay() override;
 
 private:
+    UFUNCTION()
+    void _onActorSensed(AActor* actor, FAIStimulus stimulus);
+
     void _setThrowableAsDestination();
 
     void _setRaceEndAsDestination();
@@ -51,4 +55,13 @@ private:
 
     UPROPERTY(EditDefaultsOnly, Category = "Tantrum AI | Blackboard Keys")
     FName _isPlayingKeyName = "IsPlaying";
+
+    UPROPERTY(EditDefaultsOnly, Category = "Tantrum AI | Blackboard Keys")
+    FName _canThrowKeyName = "CanThrow";
+
+    UPROPERTY(EditDefaultsOnly, Category = "Tantrum AI | Blackboard Keys")
+    FName _targetEnemyKeyName = "TargetEnemy";
+
+    UPROPERTY(VisibleAnywhere, Category = "Chaser | Perception")
+    TObjectPtr<UAIPerceptionComponent> _perceptionC;
 };
