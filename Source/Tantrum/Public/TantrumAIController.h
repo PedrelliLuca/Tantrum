@@ -25,6 +25,9 @@ public:
 
     void Tick(float deltaTime) override;
 
+    // Mimicks ATantrumPlayerController::ClientReachedEnd() by playing the celebrate montage but without showing any UI 
+    void OnReachedEnd();
+
 protected:
     void BeginPlay() override;
 

@@ -4,6 +4,7 @@
 
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "TantrumAIController.h"
 #include "TantrumGameStateBase.h"
 #include "TantrumPlayerController.h"
 #include "TantrumPlayerState.h"
@@ -13,6 +14,15 @@ ATantrumGameModeBase::ATantrumGameModeBase() {
 }
 
 void ATantrumGameModeBase::RestartGame() {
+    // Destroy AI controllers
+    for (FConstControllerIterator iterator = GetWorld()->GetControllerIterator(); iterator; ++iterator) {
+        const auto aiController = Cast<ATantrumAIController>(iterator->Get());
+        if (IsValid(aiController) && aiController->GetPawn()) {
+            aiController->Destroy(true);
+        }
+    }
+
+    // We bound the spawn of new AI controlled characters to this event in the level BP
     ResetLevel();
 
     for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator) {

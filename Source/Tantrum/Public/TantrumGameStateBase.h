@@ -6,6 +6,7 @@
 
 #include "GameFramework/GameStateBase.h"
 #include "TantrumCharacterBase.h"
+#include "TantrumPlayerState.h"
 
 #include "TantrumGameStateBase.generated.h"
 
@@ -58,12 +59,15 @@ public:
     void ClearResults() { _results.Empty(); }
 
 protected:
-    UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_GameState, Category = "States")
-    EGameState _gameState = EGameState::None;
-
     UFUNCTION()
     void OnRep_GameState(const EGameState& oldGameState);
 
+    UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_GameState, Category = "States")
+    EGameState _gameState = EGameState::None;
+
     UPROPERTY(VisibleAnywhere, Replicated, Category = "States")
     TArray<FGameResult> _results;
+
+private:
+    void _updateResults(ATantrumPlayerState* tantrumPlayerState, const ATantrumCharacterBase* tantrumCharacter);
 };

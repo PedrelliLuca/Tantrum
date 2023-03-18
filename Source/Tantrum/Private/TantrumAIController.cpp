@@ -37,6 +37,12 @@ void ATantrumAIController::Tick(float deltaTime) {
     }
 }
 
+void ATantrumAIController::OnReachedEnd() {
+    if (const auto tantrumCharacter = Cast<ATantrumCharacterBase>(GetCharacter())) {
+        tantrumCharacter->ServerPlayCelebrateMontage();
+    }
+}
+
 void ATantrumAIController::BeginPlay() {
     Super::BeginPlay();
 
