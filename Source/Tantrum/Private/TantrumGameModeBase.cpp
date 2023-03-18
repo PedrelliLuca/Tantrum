@@ -102,12 +102,23 @@ void ATantrumGameModeBase::_startGame() {
 
     for (FConstPlayerControllerIterator iterator = GetWorld()->GetPlayerControllerIterator(); iterator; ++iterator) {
         const auto playerController = iterator->Get();
-        if (playerController && playerController->PlayerState && !MustSpectate(playerController)) {
+        if (IsValid(playerController) && playerController->PlayerState && !MustSpectate(playerController)) {
             FInputModeGameOnly InputMode;
             playerController->SetInputMode(InputMode);
             playerController->SetShowMouseCursor(false);
 
             const auto playerState = playerController->GetPlayerState<ATantrumPlayerState>();
+            if (playerState) {
+                playerState->SetCurrentState(EPlayerGameState::Playing);
+                playerState->SetIsWinner(false);
+            }
+        }
+    }
+
+    for (FConstControllerIterator iterator = GetWorld()->GetControllerIterator(); iterator; ++iterator) {
+        const auto aiController = Cast<ATantrumAIController>(iterator->Get());
+        if (IsValid(aiController)) {
+            const auto playerState = aiController->GetPlayerState<ATantrumPlayerState>();
             if (playerState) {
                 playerState->SetCurrentState(EPlayerGameState::Playing);
                 playerState->SetIsWinner(false);
