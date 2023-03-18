@@ -20,6 +20,7 @@ enum class ECharacterThrowState : uint8
     RequestingPull UMETA(DisplayName = "Requesting Pull"),
     Pulling UMETA(DisplayName = "Pulling"),
     Attached UMETA(DisplayName = "Attached"),
+    Aiming UMETA(DisplayName = "Aiming"),
     Throwing UMETA(DisplayName = "Throwing"),
 };
 
@@ -47,6 +48,9 @@ public:
     UFUNCTION(BlueprintPure)
     bool IsHovering() const;
 
+    UFUNCTION(BlueprintPure)
+    bool IsStunned() const { return _isStunned; }
+
     void RequestPull();
     void RequestPullCancelation();
 
@@ -58,6 +62,14 @@ public:
 
     // To use the object rather than throwing it.
     void RequestUseObject();
+
+    bool CanAim() const { return !_isStunned && _characterThrowState == ECharacterThrowState::Attached; }
+
+    UFUNCTION(BlueprintPure)
+    bool IsAiming() const { return _characterThrowState == ECharacterThrowState::Aiming; }
+
+    void RequestAim();
+    void RequestStopAim();
 
     bool CanThrow() const;
     void RequestThrow();
@@ -98,7 +110,7 @@ protected:
     TObjectPtr<USpringArmComponent> _cameraBoom;
 
     /** Follow camera */
-    UPROPERTY(VisibleAnywhere, Category = Camera)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera)
     TObjectPtr<UCameraComponent> _followCamera;
 
 private:
@@ -114,6 +126,9 @@ private:
     // boolean, whose value is set based on IsPullingObject(). This latter uses the _characterThrowState, which is already replicated.
     UFUNCTION(Server, Reliable)
     void _serverRequestPullObject(bool bIsPulling);
+
+    UFUNCTION(Server, Reliable)
+    void _serverRequestToggleAim(bool isAiming);
 
     // RPC for playing the anim montage when throwing objects
     UFUNCTION(Server, Reliable)

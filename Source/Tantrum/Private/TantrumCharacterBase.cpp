@@ -186,6 +186,20 @@ void ATantrumCharacterBase::RequestUseObject() {
     ResetThrowableObject();
 }
 
+void ATantrumCharacterBase::RequestAim() {
+    if (CanAim()) {
+        _characterThrowState = ECharacterThrowState::Aiming;
+        _serverRequestToggleAim(true);
+    }
+}
+
+void ATantrumCharacterBase::RequestStopAim() {
+    if (_characterThrowState == ECharacterThrowState::Aiming) {
+        _characterThrowState = ECharacterThrowState::Attached;
+        _serverRequestToggleAim(false);
+    }
+}
+
 bool ATantrumCharacterBase::CanThrow() const {
     return _characterThrowState == ECharacterThrowState::Attached;
 }
@@ -756,4 +770,8 @@ FString ATantrumCharacterBase::_getNetModeDebugString() const {
     }
 
     return netModeString;
+}
+
+void ATantrumCharacterBase::_serverRequestToggleAim_Implementation(bool isAiming) {
+    _characterThrowState = isAiming ? ECharacterThrowState::Aiming : ECharacterThrowState::Attached;
 }

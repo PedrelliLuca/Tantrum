@@ -93,8 +93,8 @@ void ATantrumPlayerController::SetupInputComponent() {
     enhancedInputComponent->BindAction(_crouchAction, ETriggerEvent::Completed, this, &ATantrumPlayerController::_crouchCanceled);
 
     check(IsValid(_pullAction));
-    enhancedInputComponent->BindAction(_pullAction, ETriggerEvent::Triggered, this, &ATantrumPlayerController::_pullTriggered);
-    enhancedInputComponent->BindAction(_pullAction, ETriggerEvent::Completed, this, &ATantrumPlayerController::_pullCanceled);
+    enhancedInputComponent->BindAction(_pullAction, ETriggerEvent::Triggered, this, &ATantrumPlayerController::_requestPullOrAim);
+    enhancedInputComponent->BindAction(_pullAction, ETriggerEvent::Completed, this, &ATantrumPlayerController::_requestStopPullOrAim);
 
     check(IsValid(_throwAction));
     enhancedInputComponent->BindAction(_throwAction, ETriggerEvent::Triggered, this, &ATantrumPlayerController::_throw);
@@ -212,19 +212,27 @@ void ATantrumPlayerController::_crouchCanceled() {
     character->UnCrouch();
 }
 
-void ATantrumPlayerController::_pullTriggered() {
+void ATantrumPlayerController::_requestPullOrAim() {
     if (!_canProcessRequest()) {
         return;
     }
 
     if (const auto tantrumChar = Cast<ATantrumCharacterBase>(GetCharacter())) {
-        tantrumChar->RequestPull();
+        if (tantrumChar->CanAim()) {
+            tantrumChar->RequestAim();
+        } else {
+            tantrumChar->RequestPull();
+        }
     }
 }
 
-void ATantrumPlayerController::_pullCanceled() {
+void ATantrumPlayerController::_requestStopPullOrAim() {
     if (const auto tantrumChar = Cast<ATantrumCharacterBase>(GetCharacter())) {
-        tantrumChar->RequestPullCancelation();
+        if (tantrumChar->IsAiming()) {
+            tantrumChar->RequestStopAim();
+        } else {
+            tantrumChar->RequestPullCancelation();
+        }
     }
 }
 

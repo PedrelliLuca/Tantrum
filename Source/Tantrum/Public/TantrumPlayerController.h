@@ -80,8 +80,8 @@ private:
     void _crouchTriggered();
     void _crouchCanceled();
 
-    void _pullTriggered();
-    void _pullCanceled();
+    void _requestPullOrAim();
+    void _requestStopPullOrAim();
 
     void _throw(const FInputActionValue& value);
 
