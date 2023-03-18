@@ -59,7 +59,7 @@ void ATantrumAIController::BeginPlay() {
     }
 
     // Change this to _setRaceEndAsDestination() when testing the racing maps
-    _setThrowableAsDestination();
+    // _setThrowableAsDestination(); // Useless if we use the EQS
 }
 
 void ATantrumAIController::_setThrowableAsDestination() {
