@@ -50,6 +50,12 @@ public:
     void RequestPull();
     void RequestPullCancelation();
 
+    /** \brief Function mainly for AI, makes sure the linetrace is a success and bypasses the tracing done at Tick()
+     * NOTE: this is a ugly solution, because assuming that clients won't call this from an AI controller is a very
+     * bad way of designing software.
+     */
+    bool AttemptPullObjectAtLocation(const FVector& inLocation);
+
     // To use the object rather than throwing it.
     void RequestUseObject();
 
@@ -146,7 +152,7 @@ private:
     void _sphereCastActorTransform();
     void _lineCastActorTransform();
 
-    void _processTraceResult(const FHitResult& hitResult);
+    void _processTraceResult(const FHitResult& hitResult, bool bHighlight = true);
 
     void _onMontageBlendingOut(UAnimMontage* montage, bool bInterrupted);
     void _onMontageEnded(UAnimMontage* montage, bool bInterrupted);

@@ -150,6 +150,36 @@ void ATantrumCharacterBase::RequestPullCancelation() {
     }
 }
 
+bool ATantrumCharacterBase::AttemptPullObjectAtLocation(const FVector& inLocation) {
+    if (_characterThrowState != ECharacterThrowState::None && _characterThrowState != ECharacterThrowState::RequestingPull) {
+        return false;
+    }
+
+    const auto startLoc = GetActorLocation();
+    const auto endLoc = inLocation;
+    FHitResult hitResult;
+
+    if (GetWorld()) {
+        GetWorld()->LineTraceSingleByChannel(hitResult, startLoc, endLoc, ECollisionChannel::ECC_Visibility);
+    }
+
+#if ENABLE_DRAW_DEBUG
+    if (CVarDisplayTrace->GetBool()) {
+        DrawDebugLine(GetWorld(), startLoc, endLoc, hitResult.bBlockingHit ? FColor::Red : FColor::White, false);
+    }
+#endif
+
+    _characterThrowState = ECharacterThrowState::RequestingPull;
+    _processTraceResult(hitResult, false);
+
+    if (_characterThrowState == ECharacterThrowState::Pulling) {
+        return true;
+    }
+
+    _characterThrowState = ECharacterThrowState::None;
+    return false;
+}
+
 void ATantrumCharacterBase::RequestUseObject() {
     ApplyEffect_Implementation(_throwable->GetEffectType(), true);
     _throwable->Destroy();
@@ -560,7 +590,7 @@ void ATantrumCharacterBase::_lineCastActorTransform() {
 #endif
 }
 
-void ATantrumCharacterBase::_processTraceResult(const FHitResult& hitResult) {
+void ATantrumCharacterBase::_processTraceResult(const FHitResult& hitResult, const bool bHighlight /* = true */) {
     const auto hitThrowable = Cast<AThrowable>(hitResult.GetActor());
 
     const bool isSameActor = _throwable == hitThrowable;
@@ -580,7 +610,9 @@ void ATantrumCharacterBase::_processTraceResult(const FHitResult& hitResult) {
 
     if (!isSameActor) {
         _throwable = hitThrowable;
-        _throwable->ToggleHighlight(true);
+        if (bHighlight) {
+            _throwable->ToggleHighlight(true);
+        }
     }
 
     if (_characterThrowState == ECharacterThrowState::RequestingPull) {
