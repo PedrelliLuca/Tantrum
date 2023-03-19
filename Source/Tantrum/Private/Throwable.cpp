@@ -52,7 +52,7 @@ void AThrowable::Drop() {
     _state = EThrowState::Dropped;
 }
 
-void AThrowable::Throw(const FVector& throwDirection) {
+void AThrowable::Throw(const FVector& initialVelocity) {
     if (_state == EThrowState::Pull || _state == EThrowState::Attached) {
         DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
 
@@ -63,7 +63,7 @@ void AThrowable::Throw(const FVector& throwDirection) {
 
         // TODO: add AActor* target input that can be optionally set. If set, its root component is chosen as new HomingTargetComponent
 
-        _projectileMovementC->Velocity = throwDirection + FVector::UpVector * _initialZVelocity;
+        _projectileMovementC->Velocity = initialVelocity;
     }
 }
 
@@ -73,20 +73,28 @@ void AThrowable::NotifyHit(UPrimitiveComponent* myComp, AActor* other, UPrimitiv
 
     // NOTE: THIS ONLY HAPPENS ON THE SERVER SIDE
 
-    if (_state == EThrowState::Idle || _state == EThrowState::Attached /*|| _state == EThrowState::Dropped*/) {
+    if (_state == EThrowState::Idle || _state == EThrowState::Attached || _state == EThrowState::Dropped) {
         return;
     }
 
-    if (_state == EThrowState::Dropped) {
+    // Stun check
+    if (_state == EThrowState::Throw) {
         const auto interactable = Cast<IInteractInterface>(other);
         if (interactable) {
             // We got hit => we're getting debuffed! This is why the 3rd argument is false
             interactable->Execute_ApplyEffect(other, _effectType, false);
         }
+
+        // Retrieve the actor that has this throwable has attached and check it is not the actor that was hit
+        const auto currentOwner = GetOwner();
+        if (IsValid(currentOwner) && currentOwner != other) {
+            if (const auto otherAsTantrumC = Cast<ATantrumCharacterBase>(other); IsValid(otherAsTantrumC)) {
+                otherAsTantrumC->NotifyHitByThrowable(this);
+            }
+        }
     }
 
     if (!_pullCharacter.IsValid()) {
-        UE_LOG(LogTemp, Warning, TEXT("%s: Invalid _pullCharacter"), *FString{__FUNCTION__});
         return;
     }
 

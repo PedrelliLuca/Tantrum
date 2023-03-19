@@ -74,6 +74,7 @@ void ATantrumCharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
     DOREPLIFETIME_WITH_PARAMS_FAST(ATantrumCharacterBase, _isBeingRescued, sharedParams);
     DOREPLIFETIME_WITH_PARAMS_FAST(ATantrumCharacterBase, _lastGroundPosition, sharedParams);
     DOREPLIFETIME_WITH_PARAMS_FAST(ATantrumCharacterBase, _isStunned, sharedParams);
+    DOREPLIFETIME_WITH_PARAMS_FAST(ATantrumCharacterBase, _bIsUnderEffect, sharedParams);
 }
 
 void ATantrumCharacterBase::Landed(const FHitResult& hit) {
@@ -219,6 +220,10 @@ void ATantrumCharacterBase::RequestThrow() {
     }
 }
 
+void ATantrumCharacterBase::NotifyHitByThrowable(const AThrowable* throwable) {
+    _serverInitStun(1.0f);
+}
+
 void ATantrumCharacterBase::_serverPullObject_Implementation(AThrowable* throwable) {
     if (IsValid(throwable) && throwable->Pull(this)) {
         _characterThrowState = ECharacterThrowState::Pulling;
@@ -258,11 +263,6 @@ void ATantrumCharacterBase::Tick(const float deltaSeconds) {
         return;
     }
 
-    if (_isStunned) {
-        _serverUpdateStun(deltaSeconds);
-        return;
-    }
-
     /* The replica does not need to concern itself with trying to throw an object and doing raycasts for objects.
      * Consider you have a 4 player game, and let's consider player #2 for example.
      * The character of player 2 is replicated 3 times on machines 1, 3, and 4. However, only the character on machine #2 will be able, through the player
@@ -273,14 +273,16 @@ void ATantrumCharacterBase::Tick(const float deltaSeconds) {
         return;
     }
 
+    if (_isStunned) {
+        _serverUpdateStun(deltaSeconds);
+    }
+
     if (_bIsUnderEffect) {
-        if (_effectCooldown > 0.0f) {
-            _effectCooldown -= deltaSeconds;
-        } else {
-            _bIsUnderEffect = false;
-            _effectCooldown = _defaultEffectCooldown;
-            EndEffect();
-        }
+        _updateEffect(deltaSeconds);
+    }
+
+    if (_isStunned || _bIsUnderEffect) {
+        return;
     }
 
     if (_characterThrowState == ECharacterThrowState::Throwing) {
@@ -332,6 +334,16 @@ void ATantrumCharacterBase::OnRep_CharacterIsStunned(const bool oldIsStunned) {
 
         const auto isStunnedString = _isStunned ? FString{TEXT("True")} : FString{TEXT("False")};
         UE_LOG(LogTemp, Warning, TEXT("%s(): NewIsStunned: %s"), *FString{__FUNCTION__}, *isStunnedString);
+    }
+}
+
+void ATantrumCharacterBase::OnRep_CharacterIsUnderEffect(bool oldIsUnderEffect) {
+    if (_bIsUnderEffect != oldIsUnderEffect) {
+        const auto oldIsUnderEffectString = oldIsUnderEffect ? FString{TEXT("True")} : FString{TEXT("False")};
+        UE_LOG(LogTemp, Warning, TEXT("%s(): OldIsStunned: %s"), *FString{__FUNCTION__}, *oldIsUnderEffectString);
+
+        const auto isUnderEffectString = _bIsUnderEffect ? FString{TEXT("True")} : FString{TEXT("False")};
+        UE_LOG(LogTemp, Warning, TEXT("%s(): NewIsStunned: %s"), *FString{__FUNCTION__}, *isUnderEffectString);
     }
 }
 
@@ -420,6 +432,10 @@ void ATantrumCharacterBase::_endRescue() {
 }
 
 void ATantrumCharacterBase::ApplyEffect_Implementation(EEffectType effectType, bool bIsBuff) {
+    _serverInitEffect(effectType, bIsBuff);
+}
+
+void ATantrumCharacterBase::_serverInitEffect_Implementation(const EEffectType effectType, const bool bIsBuff) {
     if (_bIsUnderEffect) {
         return;
     }
@@ -436,7 +452,16 @@ void ATantrumCharacterBase::ApplyEffect_Implementation(EEffectType effectType, b
     }
 }
 
-void ATantrumCharacterBase::EndEffect() {
+void ATantrumCharacterBase::_updateEffect_Implementation(const float deltaTime) {
+    if (_effectCooldown > 0.0f) {
+        _effectCooldown -= deltaTime;
+    } else {
+        _effectCooldown = _defaultEffectCooldown;
+        _endEffect();
+    }
+}
+
+void ATantrumCharacterBase::_endEffect_Implementation() {
     _bIsUnderEffect = false;
     switch (_currentEffect) {
         case EEffectType::Speed:
@@ -728,12 +753,12 @@ void ATantrumCharacterBase::_serverBeginThrow_Implementation() {
         }
     }
 
-    const auto throwDirection = GetActorForwardVector() * _throwSpeed;
-    _throwable->Throw(throwDirection);
+    const auto throwVelocity = GetActorForwardVector() * _throwSpeed;
+    _throwable->Throw(throwVelocity);
 
     if (CVarDisplayThrowVelocity->GetBool()) {
         const auto start = GetMesh()->GetSocketLocation(TEXT("ObjectAttach"));
-        DrawDebugLine(GetWorld(), start, start + throwDirection, FColor::Red, false, 5.0f);
+        DrawDebugLine(GetWorld(), start, start + throwVelocity, FColor::Red, false, 5.0f);
     }
 }
 

@@ -22,7 +22,7 @@ public:
 
     void Drop();
 
-    void Throw(const FVector& throwDirection);
+    void Throw(const FVector& initialVelocity);
 
     UFUNCTION(BlueprintPure)
     bool IsIdle() const { return _state == EThrowState::Idle; }

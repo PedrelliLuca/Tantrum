@@ -74,11 +74,11 @@ public:
     bool CanThrow() const;
     void RequestThrow();
 
+    void NotifyHitByThrowable(const AThrowable* throwable);
+
     void Tick(float deltaSeconds) override;
 
     void ApplyEffect_Implementation(EEffectType effectType, bool bIsBuff) override;
-
-    void EndEffect();
 
     void ResetThrowableObject();
     void OnThrowableAttached(AThrowable* throwable);
@@ -101,6 +101,9 @@ protected:
 
     UFUNCTION()
     void OnRep_CharacterIsStunned(bool oldIsStunned);
+
+    UFUNCTION()
+    void OnRep_CharacterIsUnderEffect(bool oldIsUnderEffect);
 
     UFUNCTION()
     void OnRep_IsBeingRescued();
@@ -157,6 +160,16 @@ private:
 
     UFUNCTION(Server, Reliable)
     void _serverUpdateStun(float deltaSeconds);
+
+    UFUNCTION(Server, Reliable)
+    void _serverInitEffect(EEffectType effectType, bool bIsBuff);
+
+    UFUNCTION(Server, Reliable)
+    void _updateEffect(float deltaTime);
+
+    UFUNCTION(Server, Reliable)
+    void _endEffect();
+
 
     // These only happen on the server; the variable _isBeingRescued is replicated.
     void _startRescue();
@@ -238,7 +251,9 @@ private:
     FOnMontageBlendingOutStarted _blendingOutDelegate;
     FOnMontageEnded _montageEndedDelegate;
 
+    UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_CharacterIsUnderEffect, Category = "Effects")
     bool _bIsUnderEffect = false;
+
     bool _bIsEffectBuff = false;
 
     // handle fall out of world
