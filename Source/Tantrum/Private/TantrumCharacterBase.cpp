@@ -9,6 +9,7 @@
 #include "Net/UnrealNetwork.h"
 #include "TantrumGameInstance.h"
 #include "TantrumPlayerState.h"
+#include "VisualLogger/VisualLogger.h"
 
 constexpr int CVSphereCastPlayerView = 0;
 constexpr int CVSphereCastActorTransform = 1;
@@ -23,6 +24,8 @@ static TAutoConsoleVariable<bool> CVarDisplayTrace(TEXT("Tantrum.Character.Debug
 
 static TAutoConsoleVariable<bool> CVarDisplayThrowVelocity(
     TEXT("Tantrum.Character.Debug.DisplayThrowVelocity"), false, TEXT("Display Throw Velocity\n"), ECVF_Default);
+
+DEFINE_LOG_CATEGORY_STATIC(LogTantrumChar, Verbose, Verbose);
 
 ATantrumCharacterBase::ATantrumCharacterBase() {
     PrimaryActorTick.bCanEverTick = true;
@@ -772,6 +775,9 @@ void ATantrumCharacterBase::_serverBeginThrow_Implementation() {
         const auto start = GetMesh()->GetSocketLocation(TEXT("ObjectAttach"));
         DrawDebugLine(GetWorld(), start, start + throwVelocity, FColor::Red, false, 5.0f);
     }
+
+    const auto start = GetMesh()->GetSocketLocation(TEXT("ObjectAttach"));
+    UE_VLOG_ARROW(this, LogTantrumChar, Verbose, start, start + throwVelocity, FColor::Red, TEXT("Throw Direction"));
 }
 
 void ATantrumCharacterBase::_serverFinishThrow_Implementation() {
