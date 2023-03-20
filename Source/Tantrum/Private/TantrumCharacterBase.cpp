@@ -156,6 +156,10 @@ bool ATantrumCharacterBase::AttemptPullObjectAtLocation(const FVector& inLocatio
         return false;
     }
 
+    if (_isStunned) {
+        return false;
+    }
+
     const auto startLoc = GetActorLocation();
     const auto endLoc = inLocation;
     FHitResult hitResult;
@@ -225,7 +229,7 @@ void ATantrumCharacterBase::NotifyHitByThrowable(const AThrowable* throwable) {
 }
 
 void ATantrumCharacterBase::_serverPullObject_Implementation(AThrowable* throwable) {
-    if (IsValid(throwable) && throwable->Pull(this)) {
+    if (IsValid(throwable) && !_isStunned && throwable->Pull(this)) {
         _characterThrowState = ECharacterThrowState::Pulling;
         _throwable = throwable;
         _throwable->ToggleHighlight(false);
@@ -368,6 +372,8 @@ void ATantrumCharacterBase::_serverInitStun_Implementation(const float stunInten
     _stunTime = 0.f;
     _isStunned = true;
     GetCharacterMovement()->MaxWalkSpeed = 0.f;
+
+    ResetThrowableObject();
 }
 
 void ATantrumCharacterBase::_serverUpdateStun_Implementation(float deltaSeconds) {
@@ -643,7 +649,7 @@ void ATantrumCharacterBase::_processTraceResult(const FHitResult& hitResult, con
         }
     }
 
-    if (!isValidTarget) {
+    if (!isValidTarget || _isStunned) {
         return;
     }
 
@@ -747,6 +753,12 @@ void ATantrumCharacterBase::_onNotifyBeginReceived(FName notifyName, const FBran
 }
 
 void ATantrumCharacterBase::_serverBeginThrow_Implementation() {
+    // To guard against the fact that you might be forced to drop while throwing. For example, this can happen if you are hit by a throwable while throwing a
+    // throwable.
+    if (!_throwable.IsValid()) {
+        return;
+    }
+
     if (_throwable->GetRootComponent()) {
         if (const auto throwableRoot = Cast<UPrimitiveComponent>(_throwable->GetRootComponent())) {
             throwableRoot->IgnoreActorWhenMoving(this, true);
@@ -764,6 +776,13 @@ void ATantrumCharacterBase::_serverBeginThrow_Implementation() {
 
 void ATantrumCharacterBase::_serverFinishThrow_Implementation() {
     _characterThrowState = ECharacterThrowState::None;
+
+    // To guard against the fact that you might be forced to drop while throwing. For example, this can happen if you are hit by a throwable while throwing a
+    // throwable.
+    if (!_throwable.IsValid()) {
+        return;
+    }
+
     MoveIgnoreActorRemove(_throwable.Get());
 
     if (_throwable->GetRootComponent()) {
