@@ -9,7 +9,7 @@
 #include "TantrumGameModeBase.generated.h"
 
 /**
- *
+ * This class only lives on the server and determines what kind of game we're playing (deathmatch, capture the flag, ...)
  */
 UCLASS()
 class TANTRUM_API ATantrumGameModeBase : public AGameModeBase {
@@ -37,4 +37,7 @@ private:
 
     UPROPERTY(EditAnywhere, Category = "Game Details")
     float _gameCountdownDuration = 2.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<UTantrumGameWidget> _gameWidgetClass = nullptr;
 };

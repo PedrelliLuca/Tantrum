@@ -170,7 +170,6 @@ private:
     UFUNCTION(Server, Reliable)
     void _endEffect();
 
-
     // These only happen on the server; the variable _isBeingRescued is replicated.
     void _startRescue();
     void _updateRescue(float deltaTime);

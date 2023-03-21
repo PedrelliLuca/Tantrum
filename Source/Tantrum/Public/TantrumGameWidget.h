@@ -5,9 +5,10 @@
 #include "CoreMinimal.h"
 
 #include "Blueprint/UserWidget.h"
-#include "TantrumPlayerController.h"
 
 #include "TantrumGameWidget.generated.h"
+
+class ATantrumPlayerController;
 
 /**
  *

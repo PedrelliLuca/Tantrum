@@ -7,6 +7,7 @@
 #include "GameFramework/PlayerController.h"
 #include "InputMappingContext.h"
 #include "TantrumGameStateBase.h"
+#include "TantrumGameWidget.h"
 
 #include "TantrumPlayerController.generated.h"
 
@@ -19,7 +20,7 @@ class TANTRUM_API ATantrumPlayerController : public APlayerController {
 
 public:
     UFUNCTION(Client, Reliable)
-    void ClientDisplayCountdown(float gameCountdownDuration);
+    void ClientDisplayCountdown(float gameCountdownDuration, TSubclassOf<UTantrumGameWidget> gameWidgetClass);
 
     UFUNCTION(Client, Reliable)
     void ClientRestartGame();
@@ -27,8 +28,8 @@ public:
     UFUNCTION(Client, Reliable)
     void ClientReachedEnd();
 
-    UFUNCTION(Server, Reliable)
-    void ServerRestartLevel();
+    UFUNCTION(BlueprintCallable)
+    void OnRetrySelected();
 
 protected:
     void BeginPlay() override;
@@ -85,6 +86,9 @@ private:
 
     void _throw(const FInputActionValue& value);
 
+    UFUNCTION(Server, Reliable)
+    void _serverRestartLevel();
+
     float _lastThrowAxis = 0;
 
     UPROPERTY(EditAnywhere, Category = "HUD")
@@ -94,4 +98,7 @@ private:
     TObjectPtr<UUserWidget> _hudWidget;
 
     TWeakObjectPtr<ATantrumGameStateBase> _tantrumGameState;
+
+    UPROPERTY()
+    TObjectPtr<UTantrumGameWidget> _tantrumGameWidget = nullptr;
 };

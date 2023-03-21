@@ -14,18 +14,22 @@
 static TAutoConsoleVariable<bool> CVarDisplayLaunchInputDelta(
     TEXT("Tantrum.Character.Debug.DisplayLaunchInputDelta"), false, TEXT("Display Launch Input Delta"), ECVF_Default);
 
-void ATantrumPlayerController::ClientDisplayCountdown_Implementation(const float gameCountdownDuration) {
-    if (const auto tantrumGameInstance = GetWorld()->GetGameInstance<UTantrumGameInstance>()) {
-        tantrumGameInstance->DisplayCountdown(gameCountdownDuration, this);
+void ATantrumPlayerController::ClientDisplayCountdown_Implementation(const float gameCountdownDuration, const TSubclassOf<UTantrumGameWidget> gameWidgetClass) {
+    if (!IsValid(_tantrumGameWidget)) {
+        _tantrumGameWidget = CreateWidget<UTantrumGameWidget>(this, gameWidgetClass);
     }
+
+    _tantrumGameWidget->AddToPlayerScreen();
+    _tantrumGameWidget->StartCountdown(gameCountdownDuration, this);
 }
 
 void ATantrumPlayerController::ClientRestartGame_Implementation() {
     // Cleanup the UI for each client
-    if (const auto tantrumnPlayerState = GetPlayerState<ATantrumPlayerState>()) {
-        if (const auto tantrumGameInstance = GetWorld()->GetGameInstance<UTantrumGameInstance>()) {
-            tantrumGameInstance->RestartGame(this);
-        }
+    if (IsValid(_tantrumGameWidget)) {
+        _tantrumGameWidget->RemoveResults();
+        FInputModeGameOnly inputMode;
+        SetInputMode(inputMode);
+        SetShowMouseCursor(false);
     }
 }
 
@@ -36,20 +40,24 @@ void ATantrumPlayerController::ClientReachedEnd_Implementation() {
         tantrumCharacter->GetCharacterMovement()->DisableMovement();
     }
 
-    if (const auto tantrumGameIstance = GetWorld()->GetGameInstance<UTantrumGameInstance>()) {
-        // call the level complete event for the widget...
-    }
-
     FInputModeUIOnly inputMode;
     SetInputMode(inputMode);
     SetShowMouseCursor(true);
+
+    if (IsValid(_tantrumGameWidget)) {
+        _tantrumGameWidget->DisplayResults();
+    }
 }
 
-void ATantrumPlayerController::ServerRestartLevel_Implementation() {
+void ATantrumPlayerController::_serverRestartLevel_Implementation() {
     const auto tantrumGameMode = GetWorld()->GetAuthGameMode<ATantrumGameModeBase>();
     if (ensureMsgf(tantrumGameMode, TEXT("ATantrumnPlayerController::ServerRestartLevel_Implementation Invalid GameMode"))) {
         tantrumGameMode->RestartGame();
     }
+}
+
+void ATantrumPlayerController::OnRetrySelected() {
+    _serverRestartLevel();
 }
 
 void ATantrumPlayerController::BeginPlay() {

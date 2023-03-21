@@ -18,7 +18,7 @@ enum class EPlayerGameState : uint8
 };
 
 /**
- *
+ * Represents the state of one of the players of the game (are they playing? are they respawning? are they permanently dead?)
  */
 UCLASS()
 class TANTRUM_API ATantrumPlayerState : public APlayerState {

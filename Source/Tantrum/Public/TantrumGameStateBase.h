@@ -33,7 +33,7 @@ public:
 };
 
 /**
- *
+ * Class that represents the state of the game (paused? Loading? Waiting for players to join? Playing?)
  */
 UCLASS()
 class TANTRUM_API ATantrumGameStateBase : public AGameStateBase {

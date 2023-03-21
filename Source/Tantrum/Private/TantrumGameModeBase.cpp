@@ -88,7 +88,7 @@ void ATantrumGameModeBase::_displayCountdown() {
         auto playerController = iterator->Get();
         if (IsValid(playerController) && playerController->PlayerState && !MustSpectate(playerController)) {
             if (const auto tantrumPlayerController = Cast<ATantrumPlayerController>(playerController)) {
-                tantrumPlayerController->ClientDisplayCountdown(_gameCountdownDuration);
+                tantrumPlayerController->ClientDisplayCountdown(_gameCountdownDuration, _gameWidgetClass);
             }
         }
     }

@@ -690,17 +690,6 @@ void ATantrumCharacterBase::_onMontageEnded(UAnimMontage* montage, bool bInterru
             _throwable = nullptr;
         }
     } else if (montage == _celebrateMontage) {
-        if (IsLocallyControlled()) {
-            // this shouldn't be here...
-            // display hud, we don't want this for all, so we should broadcast and whoever is intereseted can listen...
-            if (const auto tantrumGameIstance = GetWorld()->GetGameInstance<UTantrumGameInstance>()) {
-                const auto tantrumnPlayerController = GetController<ATantrumPlayerController>();
-                if (tantrumnPlayerController) {
-                    tantrumGameIstance->DisplayLevelComplete(tantrumnPlayerController);
-                }
-            }
-        }
-
         if (const auto tantrumPlayerState = GetPlayerState<ATantrumPlayerState>()) {
             if (tantrumPlayerState->IsWinner()) {
                 // Plays the 2nd part of the montage only if you won.
